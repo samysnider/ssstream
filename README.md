@@ -2,7 +2,7 @@
 
 A minimal writing app — plain HTML, CSS and JS (`index.html`, `styles.css`, `script.js`), no build step.
 
-Live: https://ssstream.netlify.app/
+Live: https://ssstream.vercel.app/
 
 ## Run locally
 
