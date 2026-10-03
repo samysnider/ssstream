@@ -6,7 +6,7 @@ Live: https://ssstream.vercel.app/
 
 ## Design
 
-Stream shares its visual language with [Gmail Zen](https://github.com/samysnider/gmail-zen): a warm off-white page, near-black text, warm greys, Inter, and a single orange for what matters (the cursor and "Save"). Depth comes from soft shadows and blur instead of lines.
+Stream shares its visual language with [Gmail Zen](https://github.com/samysnider/gmail-zen): a warm off-white page, near-black text, warm greys, and a single orange for what matters (the cursor and "Save"). Depth comes from soft shadows and blur instead of lines. You write in Space Mono, for a typewriter feel; the interface uses Bricolage Grotesque.
 
 - **Writing:** every word but the one you're on goes soft. While you type, the controls fade back; moving the pointer brings them back.
 - **Menu:** the top-left button opens a small floating pill (new note, notes) and morphs into a close icon.

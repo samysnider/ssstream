@@ -2,12 +2,15 @@
  * Stream
  *
  * Visual language borrowed from Gmail Zen: a warm grey scale, one orange
- * accent for what to act on (the cursor, "Save"), Inter with few sizes,
+ * accent for what to act on (the cursor, "Save"), few type sizes,
  * depth from soft shadows and blur instead of lines, quick motion for
  * everyday actions and slower motion for rare moments (the notes sheet).
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap');
+/* Type: Space Mono for the writing (a typewriter feel, one word in focus at
+   a time), Bricolage Grotesque for the interface (variable weight and
+   optical size; its ink traps show at large sizes, calmer when small) */
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Space+Mono:wght@400;700&display=swap');
 
 *, *::before, *::after {
   margin: 0;
@@ -26,7 +29,8 @@
   --placeholder: #c8c7c2;  /* "Start writing..." */
   --accent: #ff670d;       /* orange: cursor, Save, the dot next to "Notes" */
 
-  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  --font: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  --font-writing: 'Space Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
   --column: 680px;         /* writing column */
   --gutter: 32px;          /* writing column's side padding */
@@ -357,11 +361,11 @@ body.is-typing .chrome:not(:hover):not(:focus-within) {
 /* The editor, the blur overlay and the placeholder are stacked layers that
    must share exactly the same type */
 .text-layer {
-  font-family: var(--font);
-  font-size: 24px;
-  line-height: 1.75;
+  font-family: var(--font-writing);
+  font-size: 21px;
+  line-height: 1.8;
   font-weight: 400;
-  letter-spacing: -0.015em;
+  letter-spacing: 0;
   word-wrap: break-word;
   white-space: pre-wrap;
 }
@@ -411,7 +415,7 @@ body.is-typing .chrome:not(:hover):not(:focus-within) {
 .custom-cursor {
   position: absolute;
   width: 3px;
-  height: 32px;
+  height: 28px;
   background: var(--accent);
   border-radius: 1.5px;
   pointer-events: none;
@@ -701,8 +705,8 @@ body.is-typing .chrome:not(:hover):not(:focus-within) {
     --sheet-top: 64px;
   }
 
-  .text-layer { font-size: 21px; }
-  .custom-cursor { height: 28px; }
+  .text-layer { font-size: 18px; }
+  .custom-cursor { height: 24px; }
 
   .top-label { font-size: 13px; }
   .view-title { max-width: 32vw; }
