@@ -3,11 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#fdfdfc">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Stream">
 <link rel="apple-touch-icon" id="touchIcon" href="">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M10 11.5C10 8.5 13 6.5 16 6.5C19 6.5 22 8.5 22 11.5C22 14.5 19 15.5 16 16.5C13 17.5 10 18.5 10 21.5C10 24.5 13 26.5 16 26.5C19 26.5 22 24.5 22 21.5' stroke='%231d1d1f' stroke-width='2.2' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M10 11.5C10 8.5 13 6.5 16 6.5C19 6.5 22 8.5 22 11.5C22 14.5 19 15.5 16 16.5C13 17.5 10 18.5 10 21.5C10 24.5 13 26.5 16 26.5C19 26.5 22 24.5 22 21.5' stroke='%2321201c' stroke-width='2.2' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
 <title>Stream</title>
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -15,68 +16,87 @@
 
 <!-- ========== WRITE SCREEN ========== -->
 <div class="screen active" id="writeScreen">
-  <div class="topbar" id="writeTopbar">
-    <div class="topbar-inner">
-      <div class="topbar-left">
-        <span class="app-name">Stream</span>
-      </div>
-      <span class="word-count" id="wordCount">0 words</span>
+  <!-- Menu: a 48px circle that grows into a pill of icons -->
+  <nav class="menu" id="menu" aria-label="Menu">
+    <button class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="menuItems" aria-label="Open menu">
+      <svg class="px icon-open" viewBox="0 0 13 13" aria-hidden="true"><path d="M3 3h1v1H3zM5 3h1v1H5zM7 3h1v1H7zM9 3h1v1H9zM3 6h1v1H3zM5 6h1v1H5zM7 6h1v1H7zM9 6h1v1H9zM3 9h1v1H3zM5 9h1v1H5zM7 9h1v1H7zM9 9h1v1H9z"/></svg>
+      <svg class="px icon-close" viewBox="0 0 13 13" aria-hidden="true"><path d="M3 3h1v1H3zM9 3h1v1H9zM4 4h1v1H4zM8 4h1v1H8zM5 5h1v1H5zM7 5h1v1H7zM6 6h1v1H6zM5 7h1v1H5zM7 7h1v1H7zM4 8h1v1H4zM8 8h1v1H8zM3 9h1v1H3zM9 9h1v1H9z"/></svg>
+    </button>
+    <div class="menu-items" id="menuItems">
+      <button class="menu-item" id="newBtn" aria-label="New note" title="New note" tabindex="-1">
+      <svg class="px" viewBox="0 0 13 13" aria-hidden="true"><path d="M6 2h1v1H6zM6 4h1v1H6zM6 6h1v1H6zM6 8h1v1H6zM6 10h1v1H6zM2 6h1v1H2zM4 6h1v1H4zM8 6h1v1H8zM10 6h1v1H10z"/></svg>
+      </button>
+      <button class="menu-item" id="notesBtn" aria-label="Notes" title="Notes" tabindex="-1">
+      <svg class="px" viewBox="0 0 13 13" aria-hidden="true"><path d="M2 3h1v1H2zM5 3h1v1H5zM7 3h1v1H7zM9 3h1v1H9zM2 6h1v1H2zM5 6h1v1H5zM7 6h1v1H7zM2 9h1v1H2zM5 9h1v1H5zM7 9h1v1H7zM9 9h1v1H9z"/></svg>
+      </button>
     </div>
-  </div>
+  </nav>
+
+  <div class="top-label" aria-live="polite"><span id="wordCount">0 words</span></div>
 
   <div class="editor-container" id="editorContainer">
     <div class="editor-wrapper">
-      <div class="editor" id="editor" contenteditable="true" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></div>
-      <div class="blur-overlay" id="blurOverlay" aria-hidden="true"></div>
+      <div class="editor text-layer" id="editor" contenteditable="true" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" aria-label="Write"></div>
+      <div class="blur-overlay text-layer" id="blurOverlay" aria-hidden="true"></div>
       <div class="custom-cursor" id="customCursor"></div>
-      <div class="quote-placeholder" id="quotePlaceholder"></div>
+      <div class="quote-placeholder text-layer" id="quotePlaceholder"></div>
     </div>
   </div>
 
-  <div class="bottom-fade"></div>
-  <div class="bottom-toolbar">
-    <button class="topbar-btn primary" id="newBtn">New</button>
-    <button class="topbar-btn" id="saveBtn">Save</button>
-    <button class="topbar-btn" id="notesBtn">Notes <span id="notesCount"></span></button>
-  </div>
-</div>
-
-<!-- ========== NOTES LIST SCREEN ========== -->
-<div class="screen" id="notesScreen">
-  <div class="topbar always-visible">
-    <div class="topbar-inner">
-      <div class="topbar-left">
-        <button class="topbar-btn" id="notesBackBtn">← Back</button>
-      </div>
-    </div>
-  </div>
-  <div class="notes-container">
-    <ul class="archives-list" id="archivesList"></ul>
+  <div class="actions">
+    <button class="pill pill-accent" id="saveBtn">Save</button>
   </div>
 </div>
 
 <!-- ========== VIEW SCREEN ========== -->
 <div class="screen" id="viewScreen">
-  <div class="topbar" id="viewTopbar">
-    <div class="topbar-inner">
-      <div class="topbar-left">
-        <button class="topbar-btn" id="backBtn">← Back</button>
-        <span class="view-topbar-title" id="viewTitle"></span>
-      </div>
-      <div class="topbar-right">
-        <span class="word-count" id="viewWordCount">0 words</span>
-        <button class="topbar-btn" id="exportBtn">Copy as .md</button>
-      </div>
-    </div>
+  <button class="round-btn back-btn" id="backBtn" aria-label="Back to notes" title="Back to notes">
+      <svg class="px" viewBox="0 0 13 13" aria-hidden="true"><path d="M6 2h1v1H6zM5 3h1v1H5zM4 4h1v1H4zM3 5h1v1H3zM2 6h9v1H2zM3 7h1v1H3zM4 8h1v1H4zM5 9h1v1H5zM6 10h1v1H6z"/></svg>
+  </button>
+
+  <div class="top-label">
+    <span class="view-title" id="viewTitle"></span>
+    <span class="top-label-sep" aria-hidden="true"></span>
+    <span id="viewWordCount">0 words</span>
   </div>
+
   <div class="editor-container">
     <div class="editor-wrapper" id="viewEditorWrapper">
-      <div class="editor" id="viewEditor" contenteditable="true" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></div>
-      <div class="blur-overlay" id="viewBlurOverlay" aria-hidden="true"></div>
+      <div class="editor text-layer" id="viewEditor" contenteditable="true" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" aria-label="Edit note"></div>
+      <div class="blur-overlay text-layer" id="viewBlurOverlay" aria-hidden="true"></div>
       <div class="custom-cursor" id="viewCustomCursor"></div>
     </div>
   </div>
-  <div class="bottom-fade"></div>
+
+  <div class="actions">
+    <button class="pill pill-icon share-btn" id="shareBtn" aria-label="Share" title="Share">
+      <svg class="px" viewBox="0 0 13 13" aria-hidden="true"><path d="M7 1h5v1H7zM10 2h2v1H10zM2 3h4v1H2zM9 3h1v1H9zM11 3h1v1H11zM1 4h1v1H1zM8 4h1v1H8zM11 4h1v1H11zM1 5h1v1H1zM7 5h1v1H7zM11 5h1v1H11zM1 6h1v1H1zM6 6h1v1H6zM1 7h1v1H1zM5 7h1v1H5zM9 7h1v1H9zM1 8h1v1H1zM9 8h1v1H9zM1 9h1v1H1zM9 9h1v1H9zM1 10h1v1H1zM9 10h1v1H9zM2 11h7v1H2z"/></svg>
+    </button>
+    <button class="pill" id="exportBtn">Copy as Markdown</button>
+    <button class="pill pill-accent" id="viewSaveBtn">Save</button>
+  </div>
+</div>
+
+<!-- Blur switch: shared by both writing screens -->
+<button class="blur-switch" id="blurSwitch" role="switch" aria-checked="true" title="Blur everything but the word you're on">
+  <span class="blur-switch-label">Blur</span>
+  <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+</button>
+
+<!-- ========== NOTES SHEET ========== -->
+<div class="sheet-layer" id="notesSheet" hidden>
+  <div class="sheet-backdrop" id="sheetBackdrop"></div>
+  <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="notesHeading">
+    <button class="pill pill-icon sheet-close" id="notesBackBtn" aria-label="Close notes" title="Close">
+      <svg class="px" viewBox="0 0 13 13" aria-hidden="true"><path d="M3 3h1v1H3zM9 3h1v1H9zM4 4h1v1H4zM8 4h1v1H8zM5 5h1v1H5zM7 5h1v1H7zM6 6h1v1H6zM5 7h1v1H5zM7 7h1v1H7zM4 8h1v1H4zM8 8h1v1H8zM3 9h1v1H3zM9 9h1v1H9z"/></svg>
+    </button>
+    <div class="sheet-scroll">
+      <div class="sheet-column">
+        <h2 class="sheet-heading" id="notesHeading">Notes<span class="count" id="notesCount"></span></h2>
+        <ul class="archives-list" id="archivesList"></ul>
+      </div>
+    </div>
+  </section>
 </div>
 
 <script src="script.js"></script>
