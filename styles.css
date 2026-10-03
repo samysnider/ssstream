@@ -28,8 +28,8 @@
   --text-subtle: #82827c;  /* quiet labels */
   --placeholder: #c8c7c2;  /* "Start writing..." */
   --accent: #ff670d;       /* orange: cursor, Save, the dot next to "Notes" */
-  --grid-line: color-mix(in srgb, var(--text) 5%, transparent); /* background grid */
-  --grid-size: 16px;       /* 8 icon pixels at 2x */
+  --grid-line: color-mix(in srgb, var(--text) 7%, transparent); /* background grid */
+  --grid-size: 64px;       /* big squares: 32 icon pixels at 2x */
 
   --font: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
   --font-writing: 'Space Mono', ui-monospace, 'SF Mono', Menlo, monospace;
@@ -83,6 +83,9 @@ html, body {
     linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
     linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
   background-size: var(--grid-size) var(--grid-size);
+  /* Centered, so the squares sit symmetrically around the writing column
+     (and line up between the page and the centered notes sheet) */
+  background-position: center 0;
 }
 
 body {
