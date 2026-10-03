@@ -36,7 +36,6 @@
   --gutter: 32px;          /* writing column's side padding */
   --edge: 24px;            /* floating controls' distance from the window edge */
   --control: 48px;         /* menu, back and close buttons */
-  --pill: 44px;            /* Save and Copy; 44px is a comfortable click target */
   --radius: 8px;           /* rows */
 
   --sheet-top: 72px;       /* notes sheet stops this far from the top */
@@ -262,10 +261,18 @@ svg {
   z-index: 20;
 }
 
+/* ---------- Pixel controls ----------
+   Save, Copy, Share and the Blur switch are drawn like the Termina icons:
+   square blocks on a 2px "pixel" (one icon pixel at 2x), notched corners
+   and a solid lip underneath instead of soft shadows, labels in Space
+   Mono. The notched shape comes from four 2px box-shadows in the fill
+   color around a square box; the lip is a fifth, darker one below. A 2px
+   margin keeps that drawn outline inside the layout box, so edges still
+   line up with --edge. */
+
 /* ---------- Blur switch ----------
    Top right, mirroring the menu. Orange when the blur is on. No padding on
-   the right, so the switch lines up with the right edge of Save below;
-   hover darkens it instead of drawing a pill around it. */
+   the right, so the switch lines up with the right edge of Save below. */
 
 .blur-switch {
   position: fixed;
@@ -277,41 +284,43 @@ svg {
   gap: 10px;
   height: var(--control);
   padding: 0 0 0 14px;
-  border-radius: calc(var(--control) / 2);
-  font-size: 14px;
+  font-family: var(--font-writing);
+  font-size: 13px;
   color: var(--text-muted);
-  transition: color 150ms var(--ease-ui);
 }
 
 .blur-switch:hover { color: var(--text); }
-.blur-switch:hover .switch-track { background-color: color-mix(in srgb, var(--hairline) 85%, var(--text)); }
 
 .switch-track {
+  --fill: color-mix(in srgb, var(--hairline) 70%, var(--text-subtle));
   position: relative;
   width: 32px;
-  height: 20px;
-  border-radius: 10px;
-  background-color: var(--hairline);
-  transition: background-color 200ms var(--ease-ui);
+  height: 16px;
+  margin: 2px;
+  background-color: var(--fill);
+  box-shadow: 0 -2px 0 0 var(--fill), 0 2px 0 0 var(--fill), -2px 0 0 0 var(--fill), 2px 0 0 0 var(--fill);
 }
 
+.blur-switch:hover .switch-track { --fill: color-mix(in srgb, var(--hairline) 45%, var(--text-subtle)); }
+.blur-switch[aria-checked="true"] .switch-track { --fill: var(--accent); }
+.blur-switch[aria-checked="true"]:hover .switch-track { --fill: color-mix(in srgb, var(--accent) 88%, var(--text)); }
+
+/* A square knob with its own 2px lip */
 .switch-thumb {
   position: absolute;
-  top: 2px;
+  top: 1px;
   left: 2px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
+  width: 12px;
+  height: 12px;
   background-color: var(--bg);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 0 0 color-mix(in srgb, var(--text) 22%, transparent);
 }
 
-.blur-switch[aria-checked="true"] .switch-track { background-color: var(--accent); }
-.blur-switch[aria-checked="true"]:hover .switch-track { background-color: color-mix(in srgb, var(--accent) 88%, var(--text)); }
-.blur-switch[aria-checked="true"] .switch-thumb { translate: 12px 0; }
+.blur-switch[aria-checked="true"] .switch-thumb { translate: 16px 0; }
 
+/* The knob jumps across in four 4px steps, like a sprite */
 @media (prefers-reduced-motion: no-preference) {
-  .switch-thumb { transition: translate 300ms var(--spring-soft); }
+  .switch-thumb { transition: translate 160ms steps(4, end); }
 }
 
 /* Off: every word stays sharp */
@@ -320,7 +329,7 @@ body.no-blur .blur-overlay .blurred {
   opacity: 1;
 }
 
-/* ---------- Pills (Save, Copy) ---------- */
+/* ---------- Buttons (Save, Copy, Share) ---------- */
 
 .actions {
   position: fixed;
@@ -333,26 +342,41 @@ body.no-blur .blur-overlay .blurred {
 }
 
 .pill {
+  --fill: var(--active);
+  --lip: color-mix(in srgb, var(--active) 82%, var(--text));
+  --lip-y: 4px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: var(--pill);
-  height: var(--pill);
-  padding: 0 22px;
-  border-radius: calc(var(--pill) / 2);
-  background-color: var(--active);
+  min-width: 40px;
+  height: 38px;
+  margin: 2px 2px 4px; /* the drawn corners and lip */
+  padding: 0 16px;
+  background-color: var(--fill);
   color: var(--text);
-  font-size: 14px;
-  font-weight: 500;
+  font-family: var(--font-writing);
+  font-size: 13px;
+  font-weight: 700;
   white-space: nowrap;
-  transition: background-color 150ms var(--ease-ui), box-shadow 400ms var(--ease-sheet), scale 150ms var(--ease-ui);
+  box-shadow:
+    0 -2px 0 0 var(--fill),
+    0 2px 0 0 var(--fill),
+    -2px 0 0 0 var(--fill),
+    2px 0 0 0 var(--fill),
+    0 var(--lip-y) 0 0 var(--lip);
 }
 
-.pill:hover { background-color: var(--hairline); }
+.pill:hover { --fill: var(--hairline); }
 
-/* Icon-only pill (Share): a 44px circle */
+/* Pressed: the key goes down onto its lip */
+.pill:active {
+  --lip-y: 2px;
+  translate: 0 2px;
+}
+
+/* Icon-only button (Share): square */
 .pill-icon {
-  width: var(--pill);
+  width: 40px;
   padding: 0;
 }
 
@@ -362,42 +386,21 @@ body:not(.can-share) .share-btn { display: none; }
 /* Room for three icons (share, copy, delete) on hover */
 body.can-share .archive-item-end { min-width: 98px; }
 
-/* The orange one floats, and glows on hover: an orange halo eases in, then
-   breathes slowly while the pointer stays */
+/* The orange one: what to act on */
 .pill-accent {
-  min-width: 88px;
-  background-color: var(--accent);
+  --fill: var(--accent);
+  --lip: color-mix(in srgb, var(--accent) 62%, var(--text));
+  min-width: 84px;
   color: var(--bg);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-.pill-accent:hover {
-  background-color: var(--accent);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent),
-    0 6px 24px color-mix(in srgb, var(--accent) 40%, transparent),
-    0 0 48px color-mix(in srgb, var(--accent) 22%, transparent);
-}
+.pill-accent:hover { --fill: color-mix(in srgb, var(--accent) 90%, var(--text)); }
 
 @media (prefers-reduced-motion: no-preference) {
-  .pill-accent:hover {
-    animation: glow 2.4s ease-in-out 400ms infinite alternate;
-  }
-
-  .pill:active,
   .round-btn:active,
   .menu-toggle:active,
   .menu-item:active {
     scale: 0.96;
-  }
-}
-
-@keyframes glow {
-  to {
-    box-shadow:
-      0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent),
-      0 8px 32px color-mix(in srgb, var(--accent) 52%, transparent),
-      0 0 72px color-mix(in srgb, var(--accent) 32%, transparent);
   }
 }
 
