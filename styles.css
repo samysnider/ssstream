@@ -205,9 +205,9 @@ svg {
 .menu-toggle:hover { background-color: var(--hover); }
 .menu.open .menu-toggle:hover { background-color: transparent; }
 
-/* The menu icon is drawn for Stream (not Termina's straight bars): three
-   rows of single pixels on the same 7x7 footprint as the close icon, so
-   both share the same pixel texture. */
+/* The menu's own icons (menu, new note, notes) are drawn for Stream
+   instead of Termina's straight bars: single pixels with 1px gaps, on the
+   same footprint as the close icon, so they share its pixel texture. */
 /* The menu icon swaps for a close icon (pixel icons can't rotate without
    blurring, so they cross-fade with a small scale instead). Both sit in
    the same grid cell. */
