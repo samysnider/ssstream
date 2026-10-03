@@ -273,6 +273,63 @@ body.is-typing .chrome:not(:hover):not(:focus-within) {
   z-index: 20;
 }
 
+/* ---------- Blur switch ----------
+   Top right, mirroring the menu. Orange when the blur is on. */
+
+.blur-switch {
+  position: fixed;
+  top: var(--edge);
+  right: var(--edge);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--control);
+  padding: 0 14px;
+  border-radius: calc(var(--control) / 2);
+  font-size: 14px;
+  color: var(--text-muted);
+  transition: background-color 150ms var(--ease-ui), color 150ms var(--ease-ui), opacity 600ms var(--ease-ui);
+}
+
+.blur-switch:hover {
+  background-color: var(--hover);
+  color: var(--text);
+}
+
+.switch-track {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border-radius: 10px;
+  background-color: var(--hairline);
+  transition: background-color 200ms var(--ease-ui);
+}
+
+.switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: var(--bg);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.blur-switch[aria-checked="true"] .switch-track { background-color: var(--accent); }
+.blur-switch[aria-checked="true"] .switch-thumb { translate: 12px 0; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .switch-thumb { transition: translate 300ms var(--spring-soft); }
+}
+
+/* Off: every word stays sharp */
+body.no-blur .blur-overlay .blurred {
+  filter: none;
+  opacity: 1;
+}
+
 /* ---------- Pills (Save, Copy) ---------- */
 
 .actions {
@@ -405,6 +462,7 @@ body.is-typing .chrome:not(:hover):not(:focus-within) {
   color: var(--text);
   filter: blur(1.5px);
   opacity: 0.4;
+  transition: filter 300ms var(--ease-ui), opacity 300ms var(--ease-ui);
 }
 
 .blur-overlay .clear {

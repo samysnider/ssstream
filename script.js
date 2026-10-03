@@ -527,6 +527,26 @@ function exportNote(note, triggerEl) {
   });
 }
 
+// --- Blur switch (remembered between visits) ---
+const blurSwitch = document.getElementById('blurSwitch');
+
+function setBlur(on) {
+  document.body.classList.toggle('no-blur', !on);
+  blurSwitch.setAttribute('aria-checked', String(on));
+  try { localStorage.setItem('stream_blur', on ? 'on' : 'off'); } catch {}
+}
+
+blurSwitch.addEventListener('click', () => {
+  setBlur(blurSwitch.getAttribute('aria-checked') !== 'true');
+  // Back to the words, caret where it was
+  if (viewScreen.classList.contains('active')) { viewEditor.focus(); updateViewCursor(); }
+  else { editor.focus(); updateMainCursor(); }
+});
+
+let savedBlur = 'on';
+try { savedBlur = localStorage.getItem('stream_blur') || 'on'; } catch {}
+setBlur(savedBlur !== 'off');
+
 // --- Button handlers ---
 saveBtn.addEventListener('click', saveNote);
 
