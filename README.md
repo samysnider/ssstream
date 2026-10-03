@@ -12,7 +12,7 @@ Stream shares its visual language with [Gmail Zen](https://github.com/samysnider
 - **Menu:** the top-left button opens a small floating pill (new note, notes) and morphs into a close icon.
 - **Notes:** rise as a sheet from the bottom while the page behind blurs. Hover a note to share it, copy it as Markdown or delete it. Share opens your device's share sheet (on iPhone: Messages, Mail, AirDrop…); it only appears where the browser supports it.
 
-Save, Copy, Share and the Blur switch match the pixel icons: square keys with notched 2px corners and a solid lip that presses down, labeled in Space Mono. Icons are from [Termina](https://github.com/nickolas-nieves/Termina) (MIT), a pixel set drawn on a 13px grid, shown at 2× so they stay crisp.
+A thin 16px grid sits behind the page and the notes sheet, like a pixel editor's canvas. Save, Copy, Share and the Blur switch match the pixel icons: square keys with notched 2px corners and a solid lip that presses down, labeled in Space Mono. Icons are from [Termina](https://github.com/nickolas-nieves/Termina) (MIT), a pixel set drawn on a 13px grid, shown at 2× so they stay crisp.
 
 Animations turn off when "Reduce motion" is enabled in your system settings.
 

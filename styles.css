@@ -28,6 +28,8 @@
   --text-subtle: #82827c;  /* quiet labels */
   --placeholder: #c8c7c2;  /* "Start writing..." */
   --accent: #ff670d;       /* orange: cursor, Save, the dot next to "Notes" */
+  --grid-line: color-mix(in srgb, var(--text) 5%, transparent); /* background grid */
+  --grid-size: 16px;       /* 8 icon pixels at 2x */
 
   --font: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
   --font-writing: 'Space Mono', ui-monospace, 'SF Mono', Menlo, monospace;
@@ -66,13 +68,22 @@
 
 html, body {
   height: 100%;
-  background: var(--bg);
+  background-color: var(--bg);
   color: var(--text);
   font-family: var(--font);
   font-optical-sizing: auto;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
+}
+
+/* A thin grid behind everything, like a pixel editor's canvas */
+.grid-bg {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+  background-size: var(--grid-size) var(--grid-size);
 }
 
 body {
@@ -413,6 +424,12 @@ body.can-share .archive-item-end { min-width: 98px; }
   padding: 120px var(--gutter) calc(160px + var(--keyboard, 0px));
   overflow-y: auto;
   scrollbar-width: none;
+  /* Text scrolling under the controls fades out at the top and bottom
+     (above the keyboard when it's open). A mask, not a painted band, so
+     the grid behind stays visible all the way to the edges. */
+  --fade-bottom: calc(100% - var(--keyboard, 0px));
+  -webkit-mask-image: linear-gradient(to bottom, transparent 48px, black 112px, black calc(var(--fade-bottom) - 160px), transparent calc(var(--fade-bottom) - 40px));
+  mask-image: linear-gradient(to bottom, transparent 48px, black 112px, black calc(var(--fade-bottom) - 160px), transparent calc(var(--fade-bottom) - 40px));
 }
 .editor-container::-webkit-scrollbar { display: none; }
 
@@ -495,29 +512,6 @@ body.can-share .archive-item-end { min-width: 98px; }
   .custom-cursor { animation: none; }
 }
 
-/* ---------- Edge fades ----------
-   Text scrolling under the controls fades into the page */
-
-.edge-fade {
-  position: fixed;
-  left: 0;
-  right: 0;
-  z-index: 5;
-  pointer-events: none;
-}
-
-.edge-fade-top {
-  top: 0;
-  height: 112px;
-  background: linear-gradient(to bottom, var(--bg) 40%, transparent);
-}
-
-.edge-fade-bottom {
-  bottom: var(--keyboard, 0px);
-  height: 160px;
-  background: linear-gradient(to top, var(--bg) 25%, transparent);
-}
-
 /* ---------- Notes sheet ----------
    Notes rise as a sheet from the bottom center of the window and stop just
    under the top controls, while the page behind blurs and dims with a faint
@@ -573,6 +567,9 @@ body.can-share .archive-item-end { min-width: 98px; }
   height: 100%;
   overflow-y: auto;
   scrollbar-width: none;
+  /* The oldest notes fade into the sheet toward the bottom */
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 200px), transparent calc(100% - 30px));
+  mask-image: linear-gradient(to bottom, black calc(100% - 200px), transparent calc(100% - 30px));
 }
 .sheet-scroll::-webkit-scrollbar { display: none; }
 
@@ -612,17 +609,6 @@ body.can-share .archive-item-end { min-width: 98px; }
   transform: translateY(-2px);
   border-radius: 50%;
   background-color: var(--accent);
-}
-
-/* The oldest notes fade into the sheet toward the bottom */
-.sheet-fade {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 200px;
-  pointer-events: none;
-  background: linear-gradient(to top, var(--bg) 15%, transparent);
 }
 
 @media (prefers-reduced-motion: no-preference) {
