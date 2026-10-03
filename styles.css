@@ -1,4 +1,13 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap');
+/*
+ * Stream
+ *
+ * Visual language borrowed from Gmail Zen: a warm grey scale, one orange
+ * accent for what to act on (the cursor, "Save"), Inter with few sizes,
+ * depth from soft shadows and blur instead of lines, quick motion for
+ * everyday actions and slower motion for rare moments (the notes sheet).
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap');
 
 *, *::before, *::after {
   margin: 0;
@@ -7,16 +16,57 @@
 }
 
 :root {
-  --text-color: #1d1d1f;
-  --bg: #ffffff;
-  --cursor-color: #00b5ff;
-  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  --bg: #fdfdfc;           /* every page background */
+  --hover: #f5f4f4;        /* row and button hover */
+  --active: #f1f0ef;       /* quiet buttons, pressed states */
+  --hairline: #e9e9e7;     /* outlines, hover on quiet buttons */
+  --text: #21201c;         /* primary text */
+  --text-muted: #63635e;   /* snippets, dates, word count */
+  --text-subtle: #82827c;  /* quiet labels */
+  --placeholder: #c8c7c2;  /* "Start writing..." */
+  --accent: #ff670d;       /* orange: cursor, Save, the dot next to "Notes" */
+
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+
+  --column: 680px;         /* writing column */
+  --gutter: 32px;          /* writing column's side padding */
+  --edge: 24px;            /* floating controls' distance from the window edge */
+  --control: 48px;         /* menu, back and close buttons */
+  --pill: 44px;            /* Save and Copy; 44px is a comfortable click target */
+  --radius: 8px;           /* rows */
+
+  --sheet-top: 72px;       /* notes sheet stops this far from the top */
+  --sheet-width: 880px;    /* the list column plus 80px on each side */
+  --sheet-column: 720px;
+  --sheet-radius: 36px;    /* close button's 24px radius + 12px inset */
+  --sheet-inset: 12px;
+
+  --shadow-float:
+    0 0 0 0.5px rgba(0, 0, 0, 0.06),
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 8px 24px rgba(0, 0, 0, 0.10);
+
+  /* Spring curves for the menu: a soft one and a bouncier one */
+  --spring-soft: linear(0, 0.0089 2.95%, 0.0349 5.91%, 0.1366 11.81%, 0.2941 17.72%, 0.4884 23.62%, 0.685 29.53%, 0.8503 35.43%, 0.9683 41.34%, 1.0223 47.24%, 1.0402 53.15%, 1.0428 59.05%, 1.0366 64.96%, 1.0269 70.86%, 1.0174 76.77%, 1.0097 82.67%, 1.0046 88.58%, 1.0015 94.48%, 1);
+  /* Sheet curve: no bounce, quick start, long soft landing */
+  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+  /* Hovers, presses and other quick state changes */
+  --ease-ui: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* More vivid orange on wide-gamut screens (like Mac displays) */
+@supports (color: color(display-p3 1 1 1)) {
+  :root {
+    --accent: color(display-p3 0.99 0.4 0.02);
+  }
 }
 
 html, body {
   height: 100%;
   background: var(--bg);
-  font-family: var(--font-main);
+  color: var(--text);
+  font-family: var(--font);
+  font-optical-sizing: auto;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
@@ -28,183 +78,342 @@ body {
   align-items: center;
 }
 
-/* Top bar */
-.topbar {
-  width: 100%;
-  padding: 20px 0;
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  outline-offset: 2px;
+}
+
+svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---------- Screens ---------- */
+
+.screen { display: none; }
+.screen.active {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------- Quiet chrome ----------
+   While you type, the controls step back so only the words remain.
+   Moving the pointer brings them back. */
+
+.chrome {
+  transition: opacity 600ms var(--ease-ui);
+}
+
+body.is-typing .chrome:not(:hover):not(:focus-within) {
+  opacity: 0.15;
+}
+
+/* ---------- Top label (word count, note date) ---------- */
+
+.top-label {
+  position: fixed;
+  top: var(--edge);
+  left: 50%;
+  translate: -50% 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--control);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.view-title {
+  max-width: 40vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.top-label-sep {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background-color: var(--text-subtle);
+}
+
+/* ---------- Menu ----------
+   Closed: a 48px circle. Open: it grows into a pill of icons with a springy
+   height, lifts with a shadow, and its entries fade in one after another.
+   It floats over the margin, so the writing never moves. */
+
+.menu {
+  position: fixed;
+  top: var(--edge);
+  left: var(--edge);
+  z-index: 20;
+  width: var(--control);
+  height: var(--control);
+  overflow: hidden;
+  border-radius: calc(var(--control) / 2);
+  background-color: transparent;
+}
+
+.menu.open {
+  height: calc(var(--control) + 4px + 2 * 40px + 4px);
+  background-color: var(--bg);
+  box-shadow: var(--shadow-float);
+  opacity: 1 !important;
+}
+
+.menu-toggle {
+  display: grid;
+  place-items: center;
+  width: var(--control);
+  height: var(--control);
+  border-radius: 50%;
+  transition: background-color 150ms var(--ease-ui), scale 150ms var(--ease-ui);
+}
+
+.menu-toggle:hover { background-color: var(--hover); }
+.menu.open .menu-toggle:hover { background-color: transparent; }
+
+/* Hamburger morphs into a close icon: the top and bottom bars rotate into
+   an X and the middle one shrinks away */
+.menu-toggle svg { fill: currentColor; stroke: none; }
+.menu-toggle .bar {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.menu.open .menu-toggle svg { opacity: 0.45; }
+.menu.open .bar-top { transform: rotate(45deg) translateY(6px); }
+.menu.open .bar-mid { transform: scaleX(0); }
+.menu.open .bar-bot { transform: rotate(-45deg) translateY(-6px); }
+
+.menu-items {
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+}
+
+/* Entries: icons only, as 40px circles; the name shows on hover */
+.menu-item {
+  display: grid;
+  place-items: center;
+  height: 40px;
+  border-radius: 20px;
+  opacity: 0;
+  transition: opacity 200ms ease, background-color 150ms var(--ease-ui), scale 150ms var(--ease-ui);
+}
+
+.menu.open .menu-item { opacity: 1; }
+.menu-item:hover { background-color: var(--hover); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .menu {
+    transition:
+      height 422ms var(--spring-soft),
+      box-shadow 216ms ease,
+      background-color 132ms ease,
+      opacity 600ms var(--ease-ui);
+  }
+
+  .menu-toggle .bar {
+    transition: transform 422ms var(--spring-soft);
+  }
+
+  .menu-toggle svg {
+    transition: opacity 150ms var(--ease-ui);
+  }
+
+  /* Opening: entries appear top to bottom, 25ms apart (the delay applies
+     to the fade only, not to the hover fill) */
+  .menu.open .menu-item:nth-child(1) { transition-delay: 75ms, 0s, 0s; }
+  .menu.open .menu-item:nth-child(2) { transition-delay: 100ms, 0s, 0s; }
+}
+
+/* ---------- Round buttons (back, close) ---------- */
+
+.round-btn {
+  display: grid;
+  place-items: center;
+  width: var(--control);
+  height: var(--control);
+  border-radius: 50%;
+  transition: background-color 150ms var(--ease-ui), scale 150ms var(--ease-ui);
+}
+
+.round-btn:hover { background-color: var(--hover); }
+
+.back-btn {
+  position: fixed;
+  top: var(--edge);
+  left: var(--edge);
+  z-index: 20;
+}
+
+/* ---------- Pills (Save, Copy) ---------- */
+
+.actions {
+  position: fixed;
+  right: var(--edge);
+  bottom: var(--edge);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pill {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  position: fixed;
-  top: 0;
-  z-index: 10;
-  opacity: 0.35;
-  transition: opacity 0.5s ease;
-}
-.topbar:hover { opacity: 1; }
-.topbar.always-visible { opacity: 1; }
-
-.topbar-inner {
-  width: 100%;
-  max-width: 680px;
-  padding: 0 32px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.topbar-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.app-name {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 20px;
+  min-width: var(--pill);
+  height: var(--pill);
+  padding: 0 22px;
+  border-radius: calc(var(--pill) / 2);
+  background-color: var(--active);
+  color: var(--text);
+  font-size: 14px;
   font-weight: 500;
-  letter-spacing: -0.4px;
-  color: #1d1d1f;
+  white-space: nowrap;
+  transition: background-color 150ms var(--ease-ui), box-shadow 400ms var(--ease-sheet), scale 150ms var(--ease-ui);
 }
 
-.topbar-btn {
-  font-family: var(--font-main);
-  font-size: 12px;
-  font-weight: 400;
-  letter-spacing: 0.03em;
-  color: #86868b;
-  background: none;
-  border: 1px solid #d2d2d7;
-  border-radius: 6px;
-  padding: 5px 12px;
-  cursor: pointer;
-  transition: all 0.25s ease;
-  outline: none;
-}
-.topbar-btn:hover {
-  color: #1d1d1f;
-  border-color: #1d1d1f;
-}
-.topbar-btn:active {
-  transform: scale(0.96);
-}
-.topbar-btn.saved {
-  color: #34c759;
-  border-color: #34c759;
-}
-.topbar-btn.primary {
-  background: #1d1d1f;
-  color: #ffffff;
-  border-color: #1d1d1f;
-}
-.topbar-btn.primary:hover {
-  background: #000000;
-  border-color: #000000;
-  color: #ffffff;
+.pill:hover { background-color: var(--hairline); }
+
+/* The orange one floats, and glows on hover: an orange halo eases in, then
+   breathes slowly while the pointer stays */
+.pill-accent {
+  min-width: 88px;
+  background-color: var(--accent);
+  color: var(--bg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-.topbar-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
+.pill-accent:hover {
+  background-color: var(--accent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent),
+    0 6px 24px color-mix(in srgb, var(--accent) 40%, transparent),
+    0 0 48px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
-.word-count {
-  font-size: 13px;
-  font-weight: 300;
-  letter-spacing: 0.02em;
-  color: #86868b;
-  font-variant-numeric: tabular-nums;
+@media (prefers-reduced-motion: no-preference) {
+  .pill-accent:hover {
+    animation: glow 2.4s ease-in-out 400ms infinite alternate;
+  }
+
+  .pill:active,
+  .round-btn:active,
+  .menu-toggle:active,
+  .menu-item:active {
+    scale: 0.96;
+  }
 }
 
-/* Editor */
+@keyframes glow {
+  to {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent),
+      0 8px 32px color-mix(in srgb, var(--accent) 52%, transparent),
+      0 0 72px color-mix(in srgb, var(--accent) 32%, transparent);
+  }
+}
+
+/* ---------- Editor ---------- */
+
 .editor-container {
   width: 100%;
-  max-width: 680px;
+  max-width: var(--column);
   height: 100%;
-  padding: 100px 32px 120px;
+  padding: 120px var(--gutter) 160px;
   overflow-y: auto;
   scrollbar-width: none;
 }
 .editor-container::-webkit-scrollbar { display: none; }
 
-.editor {
+.editor-wrapper {
   position: relative;
-  min-height: 60vh;
-  outline: none;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* The editor, the blur overlay and the placeholder are stacked layers that
+   must share exactly the same type */
+.text-layer {
+  font-family: var(--font);
   font-size: 24px;
   line-height: 1.75;
   font-weight: 400;
-  color: transparent;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
   word-wrap: break-word;
   white-space: pre-wrap;
-  caret-color: transparent;
+}
+
+.editor {
+  position: relative;
+  min-height: 60vh;
   width: 100%;
+  outline: none;
+  color: transparent;
+  caret-color: transparent;
 }
 
-.editor:empty::before {
-  content: "";
-}
-
-/* Placeholder */
 .quote-placeholder {
   position: absolute;
   top: 0;
   left: 0;
   pointer-events: none;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 24px;
-  line-height: 1.75;
-  font-weight: 400;
-  color: #d2d2d7;
+  color: var(--placeholder);
   z-index: 0;
 }
 .quote-placeholder.hidden {
   display: none;
 }
 
-/* Blurred overlay layer */
+/* Every word but the one you're on goes soft, so the next sentence matters
+   more than the last */
 .blur-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   pointer-events: none;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 24px;
-  line-height: 1.75;
-  font-weight: 400;
-  letter-spacing: -0.01em;
-  word-wrap: break-word;
-  white-space: pre-wrap;
   color: transparent;
   z-index: 1;
 }
 
 .blur-overlay .blurred {
-  color: var(--text-color);
+  color: var(--text);
   filter: blur(1.5px);
-  opacity: 0.55;
+  opacity: 0.4;
 }
 
 .blur-overlay .clear {
-  color: var(--text-color);
+  color: var(--text);
 }
 
-.editor-wrapper {
-  position: relative;
-}
-
-/* Custom cursor */
+/* The cursor: the one touch of orange while writing */
 .custom-cursor {
   position: absolute;
-  width: 4px;
-  height: 40px;
-  background: var(--cursor-color);
-  border-radius: 2px;
+  width: 3px;
+  height: 32px;
+  background: var(--accent);
+  border-radius: 1.5px;
   pointer-events: none;
   z-index: 2;
   animation: cursorBreathe 1.2s ease-in-out infinite;
@@ -215,156 +424,291 @@ body {
   50% { opacity: 0; }
 }
 
-/* Bottom fade */
-.bottom-fade {
+@media (prefers-reduced-motion: reduce) {
+  .custom-cursor { animation: none; }
+}
+
+/* ---------- Edge fades ----------
+   Text scrolling under the controls fades into the page */
+
+.edge-fade {
   position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.edge-fade-top {
+  top: 0;
+  height: 112px;
+  background: linear-gradient(to bottom, var(--bg) 40%, transparent);
+}
+
+.edge-fade-bottom {
+  bottom: 0;
+  height: 160px;
+  background: linear-gradient(to top, var(--bg) 25%, transparent);
+}
+
+/* ---------- Notes sheet ----------
+   Notes rise as a sheet from the bottom center of the window and stop just
+   under the top controls, while the page behind blurs and dims with a faint
+   warm grey. The sheet (the same off-white) reads as a lighter surface in
+   front of it. */
+
+.sheet-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+}
+
+.sheet-layer[hidden] { display: none; }
+
+.sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background-color: color-mix(in srgb, var(--text) 8%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.sheet {
+  position: absolute;
+  top: var(--sheet-top);
   bottom: 0;
   left: 0;
   right: 0;
-  height: 80px;
-  background: linear-gradient(to top, var(--bg) 0%, transparent 100%);
-  pointer-events: none;
-  z-index: 5;
+  width: min(100vw - 24px, var(--sheet-width));
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: var(--sheet-radius) var(--sheet-radius) 0 0;
+  background-color: var(--bg);
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.06),
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    0 16px 48px rgba(0, 0, 0, 0.12);
 }
 
-/* ---- Notes list screen ---- */
-.notes-container {
-  width: 100%;
-  max-width: 680px;
+/* Close: concentric with the sheet's corner, with a permanent soft
+   background so it's always easy to find */
+.sheet-close {
+  position: absolute;
+  top: var(--sheet-inset);
+  right: var(--sheet-inset);
+  z-index: 2;
+  background-color: var(--active);
+}
+
+.sheet-close:hover { background-color: var(--hairline); }
+
+.sheet-scroll {
   height: 100%;
-  padding: 100px 32px 120px;
   overflow-y: auto;
   scrollbar-width: none;
 }
-.notes-container::-webkit-scrollbar { display: none; }
+.sheet-scroll::-webkit-scrollbar { display: none; }
+
+.sheet-column {
+  width: min(100% - 48px, var(--sheet-column));
+  margin: 0 auto;
+  padding: 64px 0 200px;
+}
+
+/* "Notes · 5", with the dot in the accent orange */
+.sheet-heading {
+  display: flex;
+  align-items: baseline;
+  padding: 0 12px 16px;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.sheet-heading .count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-left: 8px;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.sheet-heading .count:empty { display: none; }
+
+.sheet-heading .count::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  transform: translateY(-2px);
+  border-radius: 50%;
+  background-color: var(--accent);
+}
+
+/* The oldest notes fade into the sheet toward the bottom */
+.sheet-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 200px;
+  pointer-events: none;
+  background: linear-gradient(to top, var(--bg) 15%, transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sheet-layer.opening .sheet-backdrop { animation: backdrop-in 700ms var(--ease-sheet) both; }
+  .sheet-layer.opening .sheet { animation: sheet-rise 500ms var(--ease-sheet) both; }
+  .sheet-layer.closing .sheet-backdrop { animation: backdrop-out 450ms var(--ease-sheet) forwards; }
+  .sheet-layer.closing .sheet { animation: sheet-fall 380ms var(--ease-sheet) forwards; }
+}
+
+.sheet-layer.closing { pointer-events: none; }
+
+@keyframes backdrop-in {
+  from { background-color: transparent; backdrop-filter: blur(0); }
+}
+
+@keyframes backdrop-out {
+  to { background-color: transparent; backdrop-filter: blur(0); }
+}
+
+@keyframes sheet-rise {
+  from { transform: translateY(100%); }
+}
+
+@keyframes sheet-fall {
+  to { transform: translateY(100%); }
+}
+
+/* ---------- Notes list ----------
+   No dividers: hierarchy comes from type. The first line is the title,
+   the rest a muted snippet, the date on the right. */
 
 .archives-list {
   list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
 }
 
 .archive-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  border-radius: 8px;
+  gap: 24px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: var(--radius);
+  font-size: 14px;
   cursor: pointer;
-  transition: background 0.2s ease;
-}
-.archive-item:hover {
-  background: #f5f5f7;
+  transition: background-color 150ms var(--ease-ui);
 }
 
-.archive-item-left {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
+.archive-item:hover { background-color: var(--hover); }
+
+.archive-item-text {
   flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-muted);
 }
 
 .archive-item-title {
-  font-size: 14px;
-  font-weight: 400;
-  color: #1d1d1f;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: var(--text);
+  font-weight: 500;
 }
 
-.archive-item-preview {
-  font-size: 12px;
-  font-weight: 300;
-  color: #aeaeb2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.archive-item-actions {
+.archive-item-end {
+  position: relative;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  flex-shrink: 0;
-  margin-left: 12px;
+  justify-content: flex-end;
+  min-width: 72px;
+  height: 100%;
 }
-.archive-item:hover .archive-item-actions {
+
+.archive-item-date {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  transition: opacity 150ms var(--ease-ui);
+}
+
+/* On hover, the date gives way to two quiet icons */
+.archive-item-actions {
+  position: absolute;
+  right: -8px;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms var(--ease-ui);
+}
+
+.archive-item:hover .archive-item-date,
+.archive-item:focus-within .archive-item-date { opacity: 0; }
+
+.archive-item:hover .archive-item-actions,
+.archive-item:focus-within .archive-item-actions {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .archive-action-btn {
-  font-family: var(--font-main);
-  font-size: 11px;
-  font-weight: 400;
-  color: #86868b;
-  background: none;
-  border: 1px solid #e5e5ea;
-  border-radius: 5px;
-  padding: 3px 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  outline: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--text-muted);
+  transition: background-color 150ms var(--ease-ui), color 150ms var(--ease-ui);
 }
+
+.archive-action-btn svg { width: 18px; height: 18px; }
+
 .archive-action-btn:hover {
-  color: #1d1d1f;
-  border-color: #c7c7cc;
+  background-color: var(--hairline);
+  color: var(--text);
 }
-.archive-action-btn.delete:hover {
-  color: #ff3b30;
-  border-color: #ff3b30;
+
+.archive-action-btn.done { color: var(--accent); }
+
+/* Touch screens have no hover: keep the icons in view */
+@media (hover: none) {
+  .archive-item-date { display: none; }
+  .archive-item-actions {
+    position: static;
+    margin-right: -8px;
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .notes-empty {
-  font-size: 15px;
-  font-weight: 300;
-  color: #d2d2d7;
-  padding: 40px 0;
-  text-align: center;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: var(--text-muted);
 }
 
-/* Bottom toolbar */
-.bottom-toolbar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: center;
-  padding: 24px 0;
-  z-index: 6;
-  gap: 10px;
-  opacity: 0;
-  transition: opacity 0.5s ease;
-}
-.bottom-toolbar:hover {
-  opacity: 1;
-}
-.screen.active:hover .bottom-toolbar {
-  opacity: 0.35;
-}
-.bottom-toolbar:hover {
-  opacity: 1 !important;
-}
+/* ---------- Small screens ---------- */
 
-/* View mode (reading a saved note) */
-.view-topbar-title {
-  font-size: 13px;
-  font-weight: 300;
-  color: #86868b;
-  letter-spacing: -0.01em;
-  max-width: 300px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+@media (max-width: 640px) {
+  :root {
+    --gutter: 20px;
+    --edge: 12px;
+    --sheet-top: 64px;
+  }
+
+  .text-layer { font-size: 21px; }
+  .custom-cursor { height: 28px; }
+
+  .top-label { font-size: 13px; }
+  .view-title { max-width: 32vw; }
+
+  .sheet-column {
+    width: calc(100% - 16px);
+    padding-top: 72px;
+  }
 }
-
-/* Screens */
-.screen { display: none; }
-.screen.active { display: flex; flex-direction: column; align-items: center; width: 100%; height: 100%; }
-

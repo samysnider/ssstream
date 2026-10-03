@@ -9,8 +9,11 @@ const customCursor = document.getElementById('customCursor');
 const editorWrapper = editor.parentElement;
 const archivesList = document.getElementById('archivesList');
 
+const menu = document.getElementById('menu');
+const menuToggle = document.getElementById('menuToggle');
+const menuItems = menu.querySelectorAll('.menu-item');
+
 const writeScreen = document.getElementById('writeScreen');
-const notesScreen = document.getElementById('notesScreen');
 const viewScreen = document.getElementById('viewScreen');
 const viewTitle = document.getElementById('viewTitle');
 const viewEditor = document.getElementById('viewEditor');
@@ -18,20 +21,35 @@ const viewBlurOverlay = document.getElementById('viewBlurOverlay');
 const viewCustomCursor = document.getElementById('viewCustomCursor');
 const viewEditorWrapper = document.getElementById('viewEditorWrapper');
 const viewWordCount = document.getElementById('viewWordCount');
+const viewSaveBtn = document.getElementById('viewSaveBtn');
 const backBtn = document.getElementById('backBtn');
-const notesBackBtn = document.getElementById('notesBackBtn');
 const exportBtn = document.getElementById('exportBtn');
+
+const notesSheet = document.getElementById('notesSheet');
+const sheetBackdrop = document.getElementById('sheetBackdrop');
+const notesBackBtn = document.getElementById('notesBackBtn');
 const notesCount = document.getElementById('notesCount');
+
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 let currentViewId = null;
 
 // --- Screen switching ---
 function showScreen(screen) {
   writeScreen.classList.remove('active');
-  notesScreen.classList.remove('active');
   viewScreen.classList.remove('active');
   screen.classList.add('active');
 }
+
+// --- Quiet chrome: controls step back while typing, return on pointer move ---
+let lastPointer = null;
+function setTyping(on) { document.body.classList.toggle('is-typing', on); }
+document.addEventListener('pointermove', (e) => {
+  // Ignore the synthetic move some browsers fire after a keypress
+  if (lastPointer && lastPointer.x === e.clientX && lastPointer.y === e.clientY) return;
+  lastPointer = { x: e.clientX, y: e.clientY };
+  setTyping(false);
+});
 
 // --- Shared editor helpers ---
 function getPlainTextFrom(el) {
@@ -48,6 +66,10 @@ function getCaretCharOffsetIn(el) {
   return preRange.toString().length;
 }
 
+function formatWordCount(count) {
+  return count === 1 ? '1 word' : `${count} words`;
+}
+
 function updateBlurFor(editorEl, overlayEl, wordCountEl) {
   const text = getPlainTextFrom(editorEl);
   const caretPos = getCaretCharOffsetIn(editorEl);
@@ -55,13 +77,12 @@ function updateBlurFor(editorEl, overlayEl, wordCountEl) {
   if (text.trim() === '') {
     editorEl.innerHTML = '';
     overlayEl.innerHTML = '';
-    if (wordCountEl) wordCountEl.textContent = '0 words';
+    if (wordCountEl) wordCountEl.textContent = formatWordCount(0);
     return;
   }
 
   const words = text.trim().split(/\s+/).filter(w => w.length > 0);
-  const count = words.length;
-  if (wordCountEl) wordCountEl.textContent = count === 1 ? '1 word' : `${count} words`;
+  if (wordCountEl) wordCountEl.textContent = formatWordCount(words.length);
 
   let start = caretPos;
   let end = caretPos;
@@ -90,7 +111,7 @@ function updateCursorFor(editorEl, wrapperEl, cursorEl) {
 
   if (!rect) {
     const temp = document.createElement('span');
-    temp.textContent = '\u200b';
+    temp.textContent = '​';
     range.insertNode(temp);
     rect = temp.getBoundingClientRect();
     const restoreRange = document.createRange();
@@ -101,18 +122,20 @@ function updateCursorFor(editorEl, wrapperEl, cursorEl) {
     sel.addRange(restoreRange);
   }
 
+  const wrapperRect = wrapperEl.getBoundingClientRect();
+  const cursorHeight = cursorEl.offsetHeight;
+
   if (!rect || (rect.width === 0 && rect.height === 0)) {
     const editorRect = editorEl.getBoundingClientRect();
-    const wrapperRect = wrapperEl.getBoundingClientRect();
+    const lineHeight = parseFloat(getComputedStyle(editorEl).lineHeight) || cursorHeight;
     cursorEl.style.left = (editorRect.left - wrapperRect.left) + 'px';
-    cursorEl.style.top = (editorRect.top - wrapperRect.top) + 'px';
+    cursorEl.style.top = (editorRect.top - wrapperRect.top + (lineHeight - cursorHeight) / 2) + 'px';
     cursorEl.style.opacity = '';
     return;
   }
 
-  const wrapperRect = wrapperEl.getBoundingClientRect();
   cursorEl.style.left = (rect.left - wrapperRect.left) + 'px';
-  cursorEl.style.top = (rect.top - wrapperRect.top + (rect.height - 40) / 2) + 'px';
+  cursorEl.style.top = (rect.top - wrapperRect.top + (rect.height - cursorHeight) / 2) + 'px';
   cursorEl.style.opacity = '';
   cursorEl.style.animation = 'none';
   cursorEl.offsetHeight;
@@ -124,14 +147,18 @@ function escapeHtml(str) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
     .replace(/\n/g, '<br>');
 }
 
 // --- Wire up main editor ---
-function updateMainBlur() { updateBlurFor(editor, blurOverlay, wordCountEl); }
+function updateMainBlur() {
+  updateBlurFor(editor, blurOverlay, wordCountEl);
+  checkPlaceholderVisibility();
+}
 function updateMainCursor() { updateCursorFor(editor, editorWrapper, customCursor); }
 
-editor.addEventListener('input', () => { updateMainBlur(); updateMainCursor(); });
+editor.addEventListener('input', () => { updateMainBlur(); updateMainCursor(); setTyping(true); });
 editor.addEventListener('keyup', () => { updateMainBlur(); updateMainCursor(); });
 editor.addEventListener('click', () => { updateMainBlur(); updateMainCursor(); });
 editor.addEventListener('focus', () => { updateMainBlur(); updateMainCursor(); });
@@ -164,27 +191,25 @@ function setupKeydown(editorEl, saveFn) {
 
 setupKeydown(editor, saveNote);
 
+// Clicking anywhere on the page (but not on a control) returns to the words
 document.addEventListener('click', (e) => {
-  if (writeScreen.classList.contains('active') && !e.target.closest('.topbar-btn') && !e.target.closest('.bottom-toolbar')) {
-    editor.focus();
-  }
-  if (viewScreen.classList.contains('active') && !e.target.closest('.topbar-btn')) {
-    viewEditor.focus();
-  }
+  if (!notesSheet.hidden) return;
+  if (e.target.closest('button, .menu')) return;
+  closeMenu();
+  if (writeScreen.classList.contains('active')) editor.focus();
+  if (viewScreen.classList.contains('active')) viewEditor.focus();
 });
-editor.focus();
-requestAnimationFrame(() => { updateMainCursor(); });
 
 // --- Wire up view editor ---
 function updateViewBlur() { updateBlurFor(viewEditor, viewBlurOverlay, viewWordCount); }
 function updateViewCursor() { updateCursorFor(viewEditor, viewEditorWrapper, viewCustomCursor); }
 
-viewEditor.addEventListener('input', () => { updateViewBlur(); updateViewCursor(); });
+viewEditor.addEventListener('input', () => { updateViewBlur(); updateViewCursor(); setTyping(true); });
 viewEditor.addEventListener('keyup', () => { updateViewBlur(); updateViewCursor(); });
 viewEditor.addEventListener('click', () => { updateViewBlur(); updateViewCursor(); });
 viewEditor.addEventListener('focus', () => { updateViewBlur(); updateViewCursor(); });
 
-setupKeydown(viewEditor, saveViewNote);
+setupKeydown(viewEditor, () => { saveViewNote(); flashLabel(viewSaveBtn, 'Saved'); });
 
 // --- localStorage Notes ---
 function getNotes() {
@@ -203,15 +228,44 @@ function updateNotesCount() {
   notesCount.textContent = count > 0 ? count : '';
 }
 
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
 function formatDate(iso) {
   const d = new Date(iso);
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const day = d.getDate();
-  const month = months[d.getMonth()];
-  const year = d.getFullYear();
   const h = d.getHours().toString().padStart(2, '0');
   const m = d.getMinutes().toString().padStart(2, '0');
-  return `${day} ${month} ${year}, ${h}:${m}`;
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}, ${h}:${m}`;
+}
+
+// Short date for the list, like a mail client: the time today, "Yesterday",
+// the weekday this week, then the day and month
+function formatShortDate(iso) {
+  const d = new Date(iso);
+  const now = new Date();
+  const startOfDay = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate());
+  const days = Math.round((startOfDay(now) - startOfDay(d)) / 86400000);
+  if (days <= 0) {
+    return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+  }
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+  if (d.getFullYear() === now.getFullYear()) return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
+function noteDate(note) {
+  return note.created || new Date(Number(note.id)).toISOString();
+}
+
+// Swap a button's label for a moment ("Saved", "Copied")
+function flashLabel(button, label) {
+  clearTimeout(button._flashTimer);
+  if (button._label === undefined) button._label = button.textContent;
+  button.textContent = label;
+  button._flashTimer = setTimeout(() => {
+    button.textContent = button._label;
+    button._label = undefined;
+  }, 1800);
 }
 
 // --- Save note (main editor, creates new) ---
@@ -233,14 +287,10 @@ function saveNote() {
 
   editor.innerHTML = '';
   blurOverlay.innerHTML = '';
-  wordCountEl.textContent = '0 words';
+  wordCountEl.textContent = formatWordCount(0);
+  checkPlaceholderVisibility();
 
-  saveBtn.textContent = 'Saved';
-  saveBtn.classList.add('saved');
-  setTimeout(() => {
-    saveBtn.textContent = 'Save';
-    saveBtn.classList.remove('saved');
-  }, 1800);
+  flashLabel(saveBtn, 'Saved');
 
   editor.focus();
   requestAnimationFrame(() => { updateMainCursor(); });
@@ -261,46 +311,109 @@ function saveViewNote() {
 function newNote() {
   editor.innerHTML = '';
   blurOverlay.innerHTML = '';
-  wordCountEl.textContent = '0 words';
+  wordCountEl.textContent = formatWordCount(0);
+  checkPlaceholderVisibility();
   editor.focus();
   updateMainCursor();
 }
 
-// --- Show notes list ---
-notesBtn.addEventListener('click', () => {
-  renderArchives();
-  showScreen(notesScreen);
+// --- Menu ---
+function openMenu() {
+  menu.classList.add('open');
+  menuToggle.setAttribute('aria-expanded', 'true');
+  menuToggle.setAttribute('aria-label', 'Close menu');
+  menuItems.forEach(item => { item.tabIndex = 0; });
+}
+
+function closeMenu() {
+  if (!menu.classList.contains('open')) return;
+  menu.classList.remove('open');
+  menuToggle.setAttribute('aria-expanded', 'false');
+  menuToggle.setAttribute('aria-label', 'Open menu');
+  menuItems.forEach(item => { item.tabIndex = -1; });
+}
+
+menuToggle.addEventListener('click', () => {
+  if (menu.classList.contains('open')) closeMenu();
+  else openMenu();
 });
 
-// --- Back from notes list to editor (preserves editor content) ---
-notesBackBtn.addEventListener('click', () => {
-  showScreen(writeScreen);
-  editor.focus();
-  updateMainBlur();
-  updateMainCursor();
+newBtn.addEventListener('click', () => { closeMenu(); newNote(); });
+notesBtn.addEventListener('click', () => { closeMenu(); openNotes(); });
+
+// --- Notes sheet ---
+// Rises from the bottom while the page behind blurs; slides back down on close
+function openNotes() {
+  renderArchives();
+  notesSheet.classList.remove('closing');
+  notesSheet.hidden = false;
+  notesSheet.classList.add('opening');
+  notesSheet.querySelector('.sheet-scroll').scrollTop = 0;
+  notesBackBtn.focus({ preventScroll: true });
+}
+
+function closeNotes(then) {
+  if (notesSheet.hidden) { if (then) then(); return; }
+  notesSheet.classList.remove('opening');
+  const finish = () => {
+    notesSheet.hidden = true;
+    notesSheet.classList.remove('closing');
+  };
+  if (reduceMotion.matches) {
+    finish();
+  } else {
+    notesSheet.classList.add('closing');
+    setTimeout(finish, 450);
+  }
+  if (then) then();
+}
+
+function closeNotesToEditor() {
+  closeNotes(() => {
+    showScreen(writeScreen);
+    editor.focus();
+    updateMainBlur();
+    updateMainCursor();
+  });
+}
+
+notesBackBtn.addEventListener('click', closeNotesToEditor);
+sheetBackdrop.addEventListener('click', closeNotesToEditor);
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (!notesSheet.hidden) closeNotesToEditor();
+  else if (menu.classList.contains('open')) { closeMenu(); menuToggle.focus(); }
 });
 
 // --- Render archives ---
+const ICON_COPY = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/></svg>';
+const ICON_DELETE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
+const ICON_CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
 function renderArchives() {
   const notes = getNotes();
+  updateNotesCount();
 
   if (notes.length === 0) {
-    archivesList.innerHTML = '<div class="notes-empty">No saved notes yet</div>';
+    archivesList.innerHTML = '<li class="notes-empty">No notes yet. Write something, then Save.</li>';
     return;
   }
 
   archivesList.innerHTML = notes.map(note => {
-    const preview = note.text.trim().substring(0, 80).replace(/\n/g, ' ');
+    const lines = note.text.trim().split('\n').map(l => l.trim()).filter(Boolean);
+    const title = (lines[0] || '').substring(0, 120);
+    const snippet = lines.slice(1).join(' ').substring(0, 160);
     return `
-      <li class="archive-item" data-id="${note.id}">
-        <div class="archive-item-left">
-          <span class="archive-item-title">${escapeHtml(preview)}</span>
-          <span class="archive-item-preview">${escapeHtml(note.title)}</span>
-        </div>
-        <div class="archive-item-actions">
-          <button class="archive-action-btn export-note" data-id="${note.id}">Copy .md</button>
-          <button class="archive-action-btn delete" data-id="${note.id}">Delete</button>
-        </div>
+      <li class="archive-item" data-id="${note.id}" tabindex="0">
+        <span class="archive-item-text"><span class="archive-item-title">${escapeHtml(title)}</span>${snippet ? ` - ${escapeHtml(snippet)}` : ''}</span>
+        <span class="archive-item-end">
+          <span class="archive-item-date">${escapeHtml(formatShortDate(noteDate(note)))}</span>
+          <span class="archive-item-actions">
+            <button class="archive-action-btn export-note" data-id="${note.id}" aria-label="Copy as Markdown" title="Copy as Markdown">${ICON_COPY}</button>
+            <button class="archive-action-btn delete" data-id="${note.id}" aria-label="Delete" title="Delete">${ICON_DELETE}</button>
+          </span>
+        </span>
       </li>
     `;
   }).join('');
@@ -329,18 +442,24 @@ archivesList.addEventListener('click', (e) => {
 
   const item = e.target.closest('.archive-item');
   if (item) {
-    const id = item.dataset.id;
-    const note = getNotes().find(n => n.id === id);
+    const note = getNotes().find(n => n.id === item.dataset.id);
     if (note) openNote(note);
   }
+});
+
+archivesList.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || !e.target.classList.contains('archive-item')) return;
+  const note = getNotes().find(n => n.id === e.target.dataset.id);
+  if (note) openNote(note);
 });
 
 // --- Open note for editing ---
 function openNote(note) {
   currentViewId = note.id;
-  viewTitle.textContent = note.title;
+  viewTitle.textContent = note.title || formatDate(noteDate(note));
   viewEditor.textContent = note.text;
   showScreen(viewScreen);
+  closeNotes();
   viewEditor.focus();
   // Place cursor at end
   const range = document.createRange();
@@ -353,38 +472,47 @@ function openNote(note) {
   updateViewCursor();
 }
 
-// --- Back from view to notes list (auto-saves changes) ---
+// --- Back from view to notes (auto-saves changes) ---
 backBtn.addEventListener('click', () => {
   saveViewNote();
   currentViewId = null;
-  renderArchives();
-  showScreen(notesScreen);
+  showScreen(writeScreen);
+  updateMainBlur();
+  openNotes();
+});
+
+viewSaveBtn.addEventListener('click', () => {
+  saveViewNote();
+  flashLabel(viewSaveBtn, 'Saved');
+  viewEditor.focus();
 });
 
 // --- Export from view ---
 exportBtn.addEventListener('click', () => {
+  saveViewNote();
   const note = getNotes().find(n => n.id === currentViewId);
-  if (note) {
-    // Save latest text before copying
-    saveViewNote();
-    const updated = getNotes().find(n => n.id === currentViewId);
-    if (updated) exportNote(updated, exportBtn);
-  }
+  if (note) exportNote(note, exportBtn);
 });
 
 // --- Copy note as Markdown to clipboard ---
+function showCopied(triggerEl) {
+  if (!triggerEl) return;
+  if (triggerEl.classList.contains('archive-action-btn')) {
+    clearTimeout(triggerEl._flashTimer);
+    triggerEl.innerHTML = ICON_CHECK;
+    triggerEl.classList.add('done');
+    triggerEl._flashTimer = setTimeout(() => {
+      triggerEl.innerHTML = ICON_COPY;
+      triggerEl.classList.remove('done');
+    }, 1800);
+  } else {
+    flashLabel(triggerEl, 'Copied');
+  }
+}
+
 function exportNote(note, triggerEl) {
   navigator.clipboard.writeText(note.text).then(() => {
-    // Show feedback on the button that was clicked
-    if (triggerEl) {
-      const original = triggerEl.textContent;
-      triggerEl.textContent = 'Copied!';
-      triggerEl.classList.add('saved');
-      setTimeout(() => {
-        triggerEl.textContent = original;
-        triggerEl.classList.remove('saved');
-      }, 1800);
-    }
+    showCopied(triggerEl);
   }).catch(() => {
     // Fallback: select text in a temporary textarea
     const ta = document.createElement('textarea');
@@ -395,55 +523,34 @@ function exportNote(note, triggerEl) {
     ta.select();
     document.execCommand('copy');
     document.body.removeChild(ta);
-    if (triggerEl) {
-      const original = triggerEl.textContent;
-      triggerEl.textContent = 'Copied!';
-      triggerEl.classList.add('saved');
-      setTimeout(() => {
-        triggerEl.textContent = original;
-        triggerEl.classList.remove('saved');
-      }, 1800);
-    }
+    showCopied(triggerEl);
   });
 }
 
 // --- Button handlers ---
 saveBtn.addEventListener('click', saveNote);
-newBtn.addEventListener('click', newNote);
-
-// --- Init ---
-updateNotesCount();
 
 // --- Placeholder ---
 const quotePlaceholder = document.getElementById('quotePlaceholder');
 quotePlaceholder.textContent = 'Start writing...';
 
 function checkPlaceholderVisibility() {
-  const text = getPlainTextFrom(editor);
-  if (text.trim() === '') {
-    quotePlaceholder.classList.remove('hidden');
-  } else {
-    quotePlaceholder.classList.add('hidden');
-  }
+  quotePlaceholder.classList.toggle('hidden', getPlainTextFrom(editor).trim() !== '');
 }
 
-// Hook into editor events
-const origUpdateMainBlur = updateMainBlur;
-updateMainBlur = function() {
-  origUpdateMainBlur();
-  checkPlaceholderVisibility();
-};
-
-// Show on load if editor is empty
+// --- Init ---
+updateNotesCount();
 checkPlaceholderVisibility();
+editor.focus();
+requestAnimationFrame(() => { updateMainCursor(); });
 
 // --- Generate apple-touch-icon ---
 (function() {
   const c = document.createElement('canvas');
   c.width = 180; c.height = 180;
   const ctx = c.getContext('2d');
-  // White background
-  ctx.fillStyle = '#ffffff';
+  // Warm off-white background
+  ctx.fillStyle = '#fdfdfc';
   ctx.fillRect(0, 0, 180, 180);
   // Draw S curve
   ctx.beginPath();
@@ -454,9 +561,14 @@ checkPlaceholderVisibility();
   ctx.bezierCurveTo(72, 96, 56, 98, 56, 116);
   ctx.bezierCurveTo(56, 134, 72, 140, 90, 140);
   ctx.bezierCurveTo(108, 140, 124, 132, 124, 116);
-  ctx.strokeStyle = '#1d1d1f';
+  ctx.strokeStyle = '#21201c';
   ctx.lineWidth = 7;
   ctx.lineCap = 'round';
   ctx.stroke();
+  // One touch of orange
+  ctx.beginPath();
+  ctx.arc(134, 140, 7, 0, Math.PI * 2);
+  ctx.fillStyle = '#ff670d';
+  ctx.fill();
   document.getElementById('touchIcon').href = c.toDataURL('image/png');
 })();
