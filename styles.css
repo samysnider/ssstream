@@ -361,6 +361,18 @@ body.no-blur .blur-overlay .blurred {
 
 .pill:hover { background-color: var(--hairline); }
 
+/* Icon-only pill (Share): a 44px circle */
+.pill-icon {
+  width: var(--pill);
+  padding: 0;
+}
+
+/* Share opens the system share sheet (iOS, macOS, Android, Windows).
+   Where the browser has none, the buttons stay hidden. */
+body:not(.can-share) .share-btn { display: none; }
+/* Room for three icons (share, copy, delete) on hover */
+body.can-share .archive-item-end { min-width: 92px; }
+
 /* The orange one floats, and glows on hover: an orange halo eases in, then
    breathes slowly while the pointer stays */
 .pill-accent {

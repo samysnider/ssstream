@@ -24,6 +24,7 @@ const viewWordCount = document.getElementById('viewWordCount');
 const viewSaveBtn = document.getElementById('viewSaveBtn');
 const backBtn = document.getElementById('backBtn');
 const exportBtn = document.getElementById('exportBtn');
+const shareBtn = document.getElementById('shareBtn');
 
 const notesSheet = document.getElementById('notesSheet');
 const sheetBackdrop = document.getElementById('sheetBackdrop');
@@ -387,6 +388,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 // --- Render archives ---
+const ICON_SHARE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4"/><path d="M8 10H7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-1"/></svg>';
 const ICON_COPY = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/></svg>';
 const ICON_DELETE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
 const ICON_CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
@@ -410,6 +412,7 @@ function renderArchives() {
         <span class="archive-item-end">
           <span class="archive-item-date">${escapeHtml(formatShortDate(noteDate(note)))}</span>
           <span class="archive-item-actions">
+            <button class="archive-action-btn share-btn share-note" data-id="${note.id}" aria-label="Share" title="Share">${ICON_SHARE}</button>
             <button class="archive-action-btn export-note" data-id="${note.id}" aria-label="Copy as Markdown" title="Copy as Markdown">${ICON_COPY}</button>
             <button class="archive-action-btn delete" data-id="${note.id}" aria-label="Delete" title="Delete">${ICON_DELETE}</button>
           </span>
@@ -428,6 +431,14 @@ archivesList.addEventListener('click', (e) => {
     const notes = getNotes().filter(n => n.id !== id);
     setNotes(notes);
     renderArchives();
+    return;
+  }
+
+  const shareBtnEl = e.target.closest('.share-note');
+  if (shareBtnEl) {
+    e.stopPropagation();
+    const note = getNotes().find(n => n.id === shareBtnEl.dataset.id);
+    if (note) shareNote(note);
     return;
   }
 
@@ -492,6 +503,28 @@ exportBtn.addEventListener('click', () => {
   saveViewNote();
   const note = getNotes().find(n => n.id === currentViewId);
   if (note) exportNote(note, exportBtn);
+});
+
+// --- Share note with the system share sheet (Messages, Mail, AirDrop...) ---
+const canShare = typeof navigator.share === 'function';
+document.body.classList.toggle('can-share', canShare);
+
+function shareNote(note) {
+  if (!canShare) return;
+  const firstLine = note.text.trim().split('\n')[0].trim();
+  navigator.share({
+    title: firstLine.substring(0, 80) || 'Note from Stream',
+    text: note.text
+  }).catch((err) => {
+    // Closing the share sheet without picking anything is not an error
+    if (err.name !== 'AbortError') console.warn('Share failed:', err);
+  });
+}
+
+shareBtn.addEventListener('click', () => {
+  saveViewNote();
+  const note = getNotes().find(n => n.id === currentViewId);
+  if (note) shareNote(note);
 });
 
 // --- Copy note as Markdown to clipboard ---

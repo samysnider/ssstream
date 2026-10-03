@@ -10,7 +10,7 @@ Stream shares its visual language with [Gmail Zen](https://github.com/samysnider
 
 - **Writing:** every word but the one you're on goes soft. While you type, the controls fade back; moving the pointer brings them back. The "Blur" switch at the top right turns the effect off (Stream remembers your choice).
 - **Menu:** the top-left button opens a small floating pill (new note, notes) and morphs into a close icon.
-- **Notes:** rise as a sheet from the bottom while the page behind blurs. Hover a note to copy it as Markdown or delete it.
+- **Notes:** rise as a sheet from the bottom while the page behind blurs. Hover a note to share it, copy it as Markdown or delete it. Share opens your device's share sheet (on iPhone: Messages, Mail, AirDrop…); it only appears where the browser supports it.
 
 Animations turn off when "Reduce motion" is enabled in your system settings.
 
