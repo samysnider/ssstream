@@ -28,8 +28,6 @@
   --text-subtle: #82827c;  /* quiet labels */
   --placeholder: #c8c7c2;  /* "Start writing..." */
   --accent: #ff670d;       /* orange: cursor, Save, the dot next to "Notes" */
-  --grid-line: color-mix(in srgb, var(--text) 7%, transparent); /* background grid */
-  --grid-size: 64px;       /* big squares: 32 icon pixels at 2x */
 
   --font: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
   --font-writing: 'Space Mono', ui-monospace, 'SF Mono', Menlo, monospace;
@@ -74,18 +72,6 @@ html, body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
-}
-
-/* A thin grid behind everything, like a pixel editor's canvas */
-.grid-bg {
-  background-color: var(--bg);
-  background-image:
-    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
-  background-size: var(--grid-size) var(--grid-size);
-  /* Centered, so the squares sit symmetrically around the writing column
-     (and line up between the page and the centered notes sheet) */
-  background-position: center 0;
 }
 
 body {
@@ -444,8 +430,7 @@ body.can-share .archive-item-end { min-width: 98px; }
   overflow-y: auto;
   scrollbar-width: none;
   /* Text scrolling under the controls fades out at the top and bottom
-     (above the keyboard when it's open). A mask, not a painted band, so
-     the grid behind stays visible all the way to the edges. */
+     (above the keyboard when it's open) */
   --fade-bottom: calc(100% - var(--keyboard, 0px));
   -webkit-mask-image: linear-gradient(to bottom, transparent 48px, black 112px, black calc(var(--fade-bottom) - 160px), transparent calc(var(--fade-bottom) - 40px));
   mask-image: linear-gradient(to bottom, transparent 48px, black 112px, black calc(var(--fade-bottom) - 160px), transparent calc(var(--fade-bottom) - 40px));
