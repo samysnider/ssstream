@@ -42,25 +42,6 @@ function showScreen(screen) {
   screen.classList.add('active');
 }
 
-// --- Quiet chrome: controls step back while typing ---
-// They return when you pause, move the pointer, or tap the screen (touch
-// screens have no pointer to move)
-const TYPING_PAUSE = 1500;
-let lastPointer = null;
-let typingTimer = null;
-function setTyping(on) {
-  clearTimeout(typingTimer);
-  document.body.classList.toggle('is-typing', on);
-  if (on) typingTimer = setTimeout(() => setTyping(false), TYPING_PAUSE);
-}
-document.addEventListener('pointerdown', () => setTyping(false));
-document.addEventListener('pointermove', (e) => {
-  // Ignore the synthetic move some browsers fire after a keypress
-  if (lastPointer && lastPointer.x === e.clientX && lastPointer.y === e.clientY) return;
-  lastPointer = { x: e.clientX, y: e.clientY };
-  setTyping(false);
-});
-
 // --- On-screen keyboard: keep Save above it ---
 // Phones shrink the visible area when the keyboard opens but leave fixed
 // elements where they were, under the keyboard. --keyboard is how much of
@@ -183,7 +164,7 @@ function updateMainBlur() {
 }
 function updateMainCursor() { updateCursorFor(editor, editorWrapper, customCursor); }
 
-editor.addEventListener('input', () => { updateMainBlur(); updateMainCursor(); setTyping(true); });
+editor.addEventListener('input', () => { updateMainBlur(); updateMainCursor(); });
 editor.addEventListener('keyup', () => { updateMainBlur(); updateMainCursor(); });
 editor.addEventListener('click', () => { updateMainBlur(); updateMainCursor(); });
 editor.addEventListener('focus', () => { updateMainBlur(); updateMainCursor(); });
@@ -229,7 +210,7 @@ document.addEventListener('click', (e) => {
 function updateViewBlur() { updateBlurFor(viewEditor, viewBlurOverlay, viewWordCount); }
 function updateViewCursor() { updateCursorFor(viewEditor, viewEditorWrapper, viewCustomCursor); }
 
-viewEditor.addEventListener('input', () => { updateViewBlur(); updateViewCursor(); setTyping(true); });
+viewEditor.addEventListener('input', () => { updateViewBlur(); updateViewCursor(); });
 viewEditor.addEventListener('keyup', () => { updateViewBlur(); updateViewCursor(); });
 viewEditor.addEventListener('click', () => { updateViewBlur(); updateViewCursor(); });
 viewEditor.addEventListener('focus', () => { updateViewBlur(); updateViewCursor(); });

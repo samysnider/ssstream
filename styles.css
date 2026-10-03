@@ -118,18 +118,6 @@ svg {
   height: 100%;
 }
 
-/* ---------- Quiet chrome ----------
-   While you type, the controls step back so only the words remain.
-   They come back when you pause, move the pointer or tap the screen. */
-
-.chrome {
-  transition: opacity 600ms var(--ease-ui);
-}
-
-body.is-typing .chrome:not(:hover):not(:focus-within) {
-  opacity: 0.15;
-}
-
 /* ---------- Top label (word count, note date) ---------- */
 
 .top-label {
@@ -184,7 +172,6 @@ body.is-typing .chrome:not(:hover):not(:focus-within) {
   height: calc(var(--control) + 4px + 2 * 40px + 4px);
   background-color: var(--bg);
   box-shadow: var(--shadow-float);
-  opacity: 1 !important;
 }
 
 .menu-toggle {
@@ -235,8 +222,7 @@ body.is-typing .chrome:not(:hover):not(:focus-within) {
     transition:
       height 422ms var(--spring-soft),
       box-shadow 216ms ease,
-      background-color 132ms ease,
-      opacity 600ms var(--ease-ui);
+      background-color 132ms ease;
   }
 
   .menu-toggle .bar {
@@ -291,7 +277,7 @@ body.is-typing .chrome:not(:hover):not(:focus-within) {
   border-radius: calc(var(--control) / 2);
   font-size: 14px;
   color: var(--text-muted);
-  transition: color 150ms var(--ease-ui), opacity 600ms var(--ease-ui);
+  transition: color 150ms var(--ease-ui);
 }
 
 .blur-switch:hover { color: var(--text); }

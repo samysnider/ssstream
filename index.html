@@ -17,7 +17,7 @@
 <!-- ========== WRITE SCREEN ========== -->
 <div class="screen active" id="writeScreen">
   <!-- Menu: a 48px circle that grows into a pill of icons -->
-  <nav class="menu chrome" id="menu" aria-label="Menu">
+  <nav class="menu" id="menu" aria-label="Menu">
     <button class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="menuItems" aria-label="Open menu">
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <rect class="bar bar-top" x="3" y="5.25" width="18" height="1.5" rx="0.75"/>
@@ -35,7 +35,7 @@
     </div>
   </nav>
 
-  <div class="top-label chrome" aria-live="polite"><span id="wordCount">0 words</span></div>
+  <div class="top-label" aria-live="polite"><span id="wordCount">0 words</span></div>
 
   <div class="editor-container" id="editorContainer">
     <div class="editor-wrapper">
@@ -49,18 +49,18 @@
   <div class="edge-fade edge-fade-top" aria-hidden="true"></div>
   <div class="edge-fade edge-fade-bottom" aria-hidden="true"></div>
 
-  <div class="actions chrome">
+  <div class="actions">
     <button class="pill pill-accent" id="saveBtn">Save</button>
   </div>
 </div>
 
 <!-- ========== VIEW SCREEN ========== -->
 <div class="screen" id="viewScreen">
-  <button class="round-btn back-btn chrome" id="backBtn" aria-label="Back to notes" title="Back to notes">
+  <button class="round-btn back-btn" id="backBtn" aria-label="Back to notes" title="Back to notes">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
   </button>
 
-  <div class="top-label chrome">
+  <div class="top-label">
     <span class="view-title" id="viewTitle"></span>
     <span class="top-label-sep" aria-hidden="true"></span>
     <span id="viewWordCount">0 words</span>
@@ -77,7 +77,7 @@
   <div class="edge-fade edge-fade-top" aria-hidden="true"></div>
   <div class="edge-fade edge-fade-bottom" aria-hidden="true"></div>
 
-  <div class="actions chrome">
+  <div class="actions">
     <button class="pill pill-icon share-btn" id="shareBtn" aria-label="Share" title="Share">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4"/><path d="M8 10H7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-1"/></svg>
     </button>
@@ -87,7 +87,7 @@
 </div>
 
 <!-- Blur switch: shared by both writing screens -->
-<button class="blur-switch chrome" id="blurSwitch" role="switch" aria-checked="true" title="Blur everything but the word you're on">
+<button class="blur-switch" id="blurSwitch" role="switch" aria-checked="true" title="Blur everything but the word you're on">
   <span class="blur-switch-label">Blur</span>
   <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
 </button>
