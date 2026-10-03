@@ -169,16 +169,18 @@ svg {
 }
 
 /* ---------- Menu ----------
-   Closed: a 48px square button. Open: it grows into a small pixel window
-   of icons with a springy height (2px square outline, solid lip under
-   it), and its entries fade in one after another. It floats over the
-   margin, so the writing never moves. */
+   Closed: a 48px square button. Open: it grows sideways into a small
+   pixel window of icons with a springy width (2px square outline, solid
+   lip under it), and its entries fade in one after another. It opens
+   along the top bar rather than downward, so it never covers the start
+   of the text, even on a phone where the text sits close to the edge. */
 
 .menu {
   position: fixed;
   top: var(--edge);
   left: var(--edge);
   z-index: 20;
+  display: flex;
   width: var(--control);
   height: var(--control);
   overflow: hidden;
@@ -188,7 +190,7 @@ svg {
 /* A 2px outline drawn outside the box (it doesn't move anything), and a
    darker 2px lip under it as wide as the outline */
 .menu.open {
-  height: calc(var(--control) + 4px + 2 * 40px + 4px);
+  width: calc(var(--control) + 4px + 2 * 40px + 4px);
   background-color: var(--bg);
   outline: 2px solid var(--pixel-line);
   box-shadow: 0 2px 0 2px var(--pixel-lip);
@@ -197,6 +199,7 @@ svg {
 .menu-toggle {
   display: grid;
   place-items: center;
+  flex-shrink: 0;
   width: var(--control);
   height: var(--control);
   transition: background-color 150ms var(--ease-ui), scale 150ms var(--ease-ui);
@@ -218,14 +221,15 @@ svg {
 
 .menu-items {
   display: flex;
-  flex-direction: column;
+  flex-shrink: 0;
   padding: 4px;
 }
 
-/* Entries: icons only, as 40px circles; the name shows on hover */
+/* Entries: icons only, as 40px squares; the name shows on hover */
 .menu-item {
   display: grid;
   place-items: center;
+  width: 40px;
   height: 40px;
   opacity: 0;
   transition: opacity 200ms ease, background-color 150ms var(--ease-ui), scale 150ms var(--ease-ui);
@@ -237,7 +241,7 @@ svg {
 @media (prefers-reduced-motion: no-preference) {
   .menu {
     transition:
-      height 422ms var(--spring-soft),
+      width 422ms var(--spring-soft),
       box-shadow 216ms ease,
       background-color 132ms ease;
   }
@@ -246,7 +250,7 @@ svg {
     transition: opacity 150ms var(--ease-ui), scale 300ms var(--spring-soft);
   }
 
-  /* Opening: entries appear top to bottom, 25ms apart (the delay applies
+  /* Opening: entries appear left to right, 25ms apart (the delay applies
      to the fade only, not to the hover fill) */
   .menu.open .menu-item:nth-child(1) { transition-delay: 75ms, 0s, 0s; }
   .menu.open .menu-item:nth-child(2) { transition-delay: 100ms, 0s, 0s; }
@@ -739,4 +743,11 @@ body.can-share .archive-item-end { min-width: 98px; }
     width: calc(100% - 16px);
     padding-top: 72px;
   }
+}
+
+/* Very narrow phones: the open menu reaches the word count, so the count
+   steps aside while the menu is open */
+@media (max-width: 360px) {
+  .top-label { transition: opacity 150ms var(--ease-ui); }
+  body:has(.menu.open) .top-label { opacity: 0; }
 }
