@@ -393,10 +393,11 @@ document.addEventListener('keydown', (e) => {
 });
 
 // --- Render archives ---
-const ICON_SHARE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4"/><path d="M8 10H7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-1"/></svg>';
-const ICON_COPY = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/></svg>';
-const ICON_DELETE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
-const ICON_CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+// Icons: Termina (MIT, github.com/nickolas-nieves/Termina), 13px pixel grid
+const ICON_SHARE = '<svg class="px" viewBox="0 0 13 13" aria-hidden="true"><path d="M7 1h5v1H7zM10 2h2v1H10zM2 3h4v1H2zM9 3h1v1H9zM11 3h1v1H11zM1 4h1v1H1zM8 4h1v1H8zM11 4h1v1H11zM1 5h1v1H1zM7 5h1v1H7zM11 5h1v1H11zM1 6h1v1H1zM6 6h1v1H6zM1 7h1v1H1zM5 7h1v1H5zM9 7h1v1H9zM1 8h1v1H1zM9 8h1v1H9zM1 9h1v1H1zM9 9h1v1H9zM1 10h1v1H1zM9 10h1v1H9zM2 11h7v1H2z"/></svg>';
+const ICON_COPY = '<svg class="px" viewBox="0 0 13 13" aria-hidden="true"><path d="M2 1h6v1H2zM1 2h1v1H1zM8 2h1v1H8zM1 3h1v1H1zM8 3h1v1H8zM1 4h1v1H1zM8 4h3v1H8zM1 5h1v1H1zM8 5h1v1H8zM11 5h1v1H11zM1 6h1v1H1zM8 6h1v1H8zM11 6h1v1H11zM1 7h1v1H1zM8 7h1v1H8zM11 7h1v1H11zM2 8h6v1H2zM11 8h1v1H11zM4 9h1v1H4zM11 9h1v1H11zM4 10h1v1H4zM11 10h1v1H11zM5 11h6v1H5z"/></svg>';
+const ICON_DELETE = '<svg class="px" viewBox="0 0 13 13" aria-hidden="true"><path d="M5 1h3v1H5zM4 2h1v1H4zM8 2h1v1H8zM2 3h9v1H2zM3 4h1v1H3zM9 4h1v1H9zM3 5h1v1H3zM5 5h1v1H5zM7 5h1v1H7zM9 5h1v1H9zM3 6h1v1H3zM5 6h1v1H5zM7 6h1v1H7zM9 6h1v1H9zM3 7h1v1H3zM9 7h1v1H9zM3 8h1v1H3zM9 8h1v1H9zM3 9h1v1H3zM9 9h1v1H9zM3 10h1v1H3zM9 10h1v1H9zM4 11h5v1H4z"/></svg>';
+const ICON_CHECK = '<svg class="px" viewBox="0 0 13 13" aria-hidden="true"><path d="M10 3h1v1H10zM9 4h1v1H9zM8 5h1v1H8zM7 6h1v1H7zM2 7h1v1H2zM6 7h1v1H6zM3 8h1v1H3zM5 8h1v1H5zM4 9h1v1H4z"/></svg>';
 
 function renderArchives() {
   const notes = getNotes();

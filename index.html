@@ -19,18 +19,15 @@
   <!-- Menu: a 48px circle that grows into a pill of icons -->
   <nav class="menu" id="menu" aria-label="Menu">
     <button class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="menuItems" aria-label="Open menu">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <rect class="bar bar-top" x="3" y="5.25" width="18" height="1.5" rx="0.75"/>
-        <rect class="bar bar-mid" x="3" y="11.25" width="18" height="1.5" rx="0.75"/>
-        <rect class="bar bar-bot" x="3" y="17.25" width="18" height="1.5" rx="0.75"/>
-      </svg>
+      <svg class="px icon-open" viewBox="0 0 13 13" aria-hidden="true"><path d="M3 4h7v1H3zM3 6h7v1H3zM3 8h7v1H3z"/></svg>
+      <svg class="px icon-close" viewBox="0 0 13 13" aria-hidden="true"><path d="M3 3h1v1H3zM9 3h1v1H9zM4 4h1v1H4zM8 4h1v1H8zM5 5h1v1H5zM7 5h1v1H7zM6 6h1v1H6zM5 7h1v1H5zM7 7h1v1H7zM4 8h1v1H4zM8 8h1v1H8zM3 9h1v1H3zM9 9h1v1H9z"/></svg>
     </button>
     <div class="menu-items" id="menuItems">
       <button class="menu-item" id="newBtn" aria-label="New note" title="New note" tabindex="-1">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      <svg class="px" viewBox="0 0 13 13" aria-hidden="true"><path d="M6 3h1v1H6zM6 4h1v1H6zM6 5h1v1H6zM3 6h7v1H3zM6 7h1v1H6zM6 8h1v1H6zM6 9h1v1H6z"/></svg>
       </button>
       <button class="menu-item" id="notesBtn" aria-label="Notes" title="Notes" tabindex="-1">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="0.5"/><circle cx="4" cy="12" r="0.5"/><circle cx="4" cy="18" r="0.5"/></svg>
+      <svg class="px" viewBox="0 0 13 13" aria-hidden="true"><path d="M2 3h9v1H2zM2 5h7v1H2zM2 7h9v1H2zM2 9h7v1H2z"/></svg>
       </button>
     </div>
   </nav>
@@ -57,7 +54,7 @@
 <!-- ========== VIEW SCREEN ========== -->
 <div class="screen" id="viewScreen">
   <button class="round-btn back-btn" id="backBtn" aria-label="Back to notes" title="Back to notes">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
+      <svg class="px" viewBox="0 0 13 13" aria-hidden="true"><path d="M6 2h1v1H6zM5 3h1v1H5zM4 4h1v1H4zM3 5h1v1H3zM2 6h9v1H2zM3 7h1v1H3zM4 8h1v1H4zM5 9h1v1H5zM6 10h1v1H6z"/></svg>
   </button>
 
   <div class="top-label">
@@ -79,7 +76,7 @@
 
   <div class="actions">
     <button class="pill pill-icon share-btn" id="shareBtn" aria-label="Share" title="Share">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4"/><path d="M8 10H7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-1"/></svg>
+      <svg class="px" viewBox="0 0 13 13" aria-hidden="true"><path d="M7 1h5v1H7zM10 2h2v1H10zM2 3h4v1H2zM9 3h1v1H9zM11 3h1v1H11zM1 4h1v1H1zM8 4h1v1H8zM11 4h1v1H11zM1 5h1v1H1zM7 5h1v1H7zM11 5h1v1H11zM1 6h1v1H1zM6 6h1v1H6zM1 7h1v1H1zM5 7h1v1H5zM9 7h1v1H9zM1 8h1v1H1zM9 8h1v1H9zM1 9h1v1H1zM9 9h1v1H9zM1 10h1v1H1zM9 10h1v1H9zM2 11h7v1H2z"/></svg>
     </button>
     <button class="pill" id="exportBtn">Copy as Markdown</button>
     <button class="pill pill-accent" id="viewSaveBtn">Save</button>
@@ -97,7 +94,7 @@
   <div class="sheet-backdrop" id="sheetBackdrop"></div>
   <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="notesHeading">
     <button class="round-btn sheet-close" id="notesBackBtn" aria-label="Close notes" title="Close">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      <svg class="px" viewBox="0 0 13 13" aria-hidden="true"><path d="M3 3h1v1H3zM9 3h1v1H9zM4 4h1v1H4zM8 4h1v1H8zM5 5h1v1H5zM7 5h1v1H7zM6 6h1v1H6zM5 7h1v1H5zM7 7h1v1H7zM4 8h1v1H4zM8 8h1v1H8zM3 9h1v1H3zM9 9h1v1H9z"/></svg>
     </button>
     <div class="sheet-scroll">
       <div class="sheet-column">

@@ -96,6 +96,17 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
+/* Icons: Termina, a 13px pixel grid (MIT, github.com/nickolas-nieves/Termina).
+   Drawn at exactly 2x so every icon pixel lands on whole screen pixels. */
+svg.px {
+  display: block;
+  width: 26px;
+  height: 26px;
+  fill: currentColor;
+  stroke: none;
+  shape-rendering: crispEdges;
+}
+
 svg {
   display: block;
   width: 24px;
@@ -186,17 +197,13 @@ svg {
 .menu-toggle:hover { background-color: var(--hover); }
 .menu.open .menu-toggle:hover { background-color: transparent; }
 
-/* Hamburger morphs into a close icon: the top and bottom bars rotate into
-   an X and the middle one shrinks away */
-.menu-toggle svg { fill: currentColor; stroke: none; }
-.menu-toggle .bar {
-  transform-box: view-box;
-  transform-origin: 12px 12px;
-}
-.menu.open .menu-toggle svg { opacity: 0.45; }
-.menu.open .bar-top { transform: rotate(45deg) translateY(6px); }
-.menu.open .bar-mid { transform: scaleX(0); }
-.menu.open .bar-bot { transform: rotate(-45deg) translateY(-6px); }
+/* The menu icon swaps for a close icon (pixel icons can't rotate without
+   blurring, so they cross-fade with a small scale instead). Both sit in
+   the same grid cell. */
+.menu-toggle svg { grid-area: 1 / 1; }
+.menu-toggle .icon-close { opacity: 0; scale: 0.6; }
+.menu.open .menu-toggle .icon-open { opacity: 0; scale: 0.6; }
+.menu.open .menu-toggle .icon-close { opacity: 0.6; scale: 1; }
 
 .menu-items {
   display: flex;
@@ -225,12 +232,8 @@ svg {
       background-color 132ms ease;
   }
 
-  .menu-toggle .bar {
-    transition: transform 422ms var(--spring-soft);
-  }
-
   .menu-toggle svg {
-    transition: opacity 150ms var(--ease-ui);
+    transition: opacity 150ms var(--ease-ui), scale 300ms var(--spring-soft);
   }
 
   /* Opening: entries appear top to bottom, 25ms apart (the delay applies
@@ -357,7 +360,7 @@ body.no-blur .blur-overlay .blurred {
    Where the browser has none, the buttons stay hidden. */
 body:not(.can-share) .share-btn { display: none; }
 /* Room for three icons (share, copy, delete) on hover */
-body.can-share .archive-item-end { min-width: 92px; }
+body.can-share .archive-item-end { min-width: 98px; }
 
 /* The orange one floats, and glows on hover: an orange halo eases in, then
    breathes slowly while the pointer stays */
@@ -720,14 +723,13 @@ body.can-share .archive-item-end { min-width: 92px; }
 .archive-action-btn {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   color: var(--text-muted);
   transition: background-color 150ms var(--ease-ui), color 150ms var(--ease-ui);
 }
 
-.archive-action-btn svg { width: 18px; height: 18px; }
 
 .archive-action-btn:hover {
   background-color: var(--hairline);
