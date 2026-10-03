@@ -120,7 +120,7 @@ svg {
 
 /* ---------- Quiet chrome ----------
    While you type, the controls step back so only the words remain.
-   Moving the pointer brings them back. */
+   They come back when you pause, move the pointer or tap the screen. */
 
 .chrome {
   transition: opacity 600ms var(--ease-ui);
@@ -336,7 +336,7 @@ body.no-blur .blur-overlay .blurred {
 .actions {
   position: fixed;
   right: var(--edge);
-  bottom: var(--edge);
+  bottom: calc(var(--edge) + var(--keyboard, 0px)); /* above the on-screen keyboard */
   z-index: 20;
   display: flex;
   align-items: center;
@@ -418,7 +418,7 @@ body.can-share .archive-item-end { min-width: 92px; }
   width: 100%;
   max-width: var(--column);
   height: 100%;
-  padding: 120px var(--gutter) 160px;
+  padding: 120px var(--gutter) calc(160px + var(--keyboard, 0px));
   overflow-y: auto;
   scrollbar-width: none;
 }
@@ -521,7 +521,7 @@ body.can-share .archive-item-end { min-width: 92px; }
 }
 
 .edge-fade-bottom {
-  bottom: 0;
+  bottom: var(--keyboard, 0px);
   height: 160px;
   background: linear-gradient(to top, var(--bg) 25%, transparent);
 }

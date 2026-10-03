@@ -42,15 +42,39 @@ function showScreen(screen) {
   screen.classList.add('active');
 }
 
-// --- Quiet chrome: controls step back while typing, return on pointer move ---
+// --- Quiet chrome: controls step back while typing ---
+// They return when you pause, move the pointer, or tap the screen (touch
+// screens have no pointer to move)
+const TYPING_PAUSE = 1500;
 let lastPointer = null;
-function setTyping(on) { document.body.classList.toggle('is-typing', on); }
+let typingTimer = null;
+function setTyping(on) {
+  clearTimeout(typingTimer);
+  document.body.classList.toggle('is-typing', on);
+  if (on) typingTimer = setTimeout(() => setTyping(false), TYPING_PAUSE);
+}
+document.addEventListener('pointerdown', () => setTyping(false));
 document.addEventListener('pointermove', (e) => {
   // Ignore the synthetic move some browsers fire after a keypress
   if (lastPointer && lastPointer.x === e.clientX && lastPointer.y === e.clientY) return;
   lastPointer = { x: e.clientX, y: e.clientY };
   setTyping(false);
 });
+
+// --- On-screen keyboard: keep Save above it ---
+// Phones shrink the visible area when the keyboard opens but leave fixed
+// elements where they were, under the keyboard. --keyboard is how much of
+// the bottom of the window the keyboard covers.
+if (window.visualViewport) {
+  const vv = window.visualViewport;
+  const updateKeyboard = () => {
+    const covered = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+    document.documentElement.style.setProperty('--keyboard', covered + 'px');
+  };
+  vv.addEventListener('resize', updateKeyboard);
+  vv.addEventListener('scroll', updateKeyboard);
+  updateKeyboard();
+}
 
 // --- Shared editor helpers ---
 function getPlainTextFrom(el) {
