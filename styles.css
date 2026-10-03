@@ -274,7 +274,9 @@ body.is-typing .chrome:not(:hover):not(:focus-within) {
 }
 
 /* ---------- Blur switch ----------
-   Top right, mirroring the menu. Orange when the blur is on. */
+   Top right, mirroring the menu. Orange when the blur is on. No padding on
+   the right, so the switch lines up with the right edge of Save below;
+   hover darkens it instead of drawing a pill around it. */
 
 .blur-switch {
   position: fixed;
@@ -285,17 +287,15 @@ body.is-typing .chrome:not(:hover):not(:focus-within) {
   align-items: center;
   gap: 10px;
   height: var(--control);
-  padding: 0 14px;
+  padding: 0 0 0 14px;
   border-radius: calc(var(--control) / 2);
   font-size: 14px;
   color: var(--text-muted);
-  transition: background-color 150ms var(--ease-ui), color 150ms var(--ease-ui), opacity 600ms var(--ease-ui);
+  transition: color 150ms var(--ease-ui), opacity 600ms var(--ease-ui);
 }
 
-.blur-switch:hover {
-  background-color: var(--hover);
-  color: var(--text);
-}
+.blur-switch:hover { color: var(--text); }
+.blur-switch:hover .switch-track { background-color: color-mix(in srgb, var(--hairline) 85%, var(--text)); }
 
 .switch-track {
   position: relative;
@@ -318,6 +318,7 @@ body.is-typing .chrome:not(:hover):not(:focus-within) {
 }
 
 .blur-switch[aria-checked="true"] .switch-track { background-color: var(--accent); }
+.blur-switch[aria-checked="true"]:hover .switch-track { background-color: color-mix(in srgb, var(--accent) 88%, var(--text)); }
 .blur-switch[aria-checked="true"] .switch-thumb { translate: 12px 0; }
 
 @media (prefers-reduced-motion: no-preference) {
