@@ -8,7 +8,7 @@ Live: https://ssstream.vercel.app/
 
 Stream shares its visual language with [Gmail Zen](https://github.com/samysnider/gmail-zen): a warm off-white page, near-black text, warm greys, and a single orange for what matters (the cursor and "Save"). Everything is set in [iA Writer Quattro](https://github.com/iaolo/iA-Fonts) by iA (Information Architects), based on IBM Plex: even, typewriter-like widths that stay comfortable for long writing. It's bundled in `fonts/` under the SIL Open Font License (`fonts/LICENSE.md`).
 
-- **Writing:** every word but the one you're on goes soft. The "Blur" switch at the top right turns the effect off (Stream remembers your choice). On phones, Save stays just above the keyboard.
+- **Writing:** every word but the one you're on goes soft. The "Blur" switch at the top right turns the effect off (Stream remembers your choice). The word count sits at the bottom center, level with Save. On phones, both stay just above the keyboard.
 - **Menu:** the top-left button opens a small pixel window (new note, notes) sideways along the top bar, so it never covers your text, and swaps to a close icon.
 - **Notes:** rise as a sheet from the bottom while the page behind blurs. Hover a note to share it, copy it as Markdown or delete it. Share opens your device's share sheet (on iPhone: Messages, Mail, AirDrop…); it only appears where the browser supports it.
 

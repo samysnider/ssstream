@@ -196,6 +196,15 @@ svg {
   background-color: var(--text-subtle);
 }
 
+/* On the writing screen the word count sits at the bottom center instead,
+   on the same line as Save (centered on Save's 42px key, above its lip),
+   and rises with it above the on-screen keyboard */
+.top-label.bottom-label {
+  top: auto;
+  bottom: calc(var(--edge) + var(--keyboard, 0px) + 2px);
+  height: 42px;
+}
+
 /* ---------- Menu ----------
    Closed: a 48px square button. Open: it grows sideways into a small
    pixel window of icons with a springy width (2px square outline, solid
@@ -771,11 +780,4 @@ body.can-share .archive-item-end { min-width: 98px; }
     width: calc(100% - 16px);
     padding-top: 72px;
   }
-}
-
-/* Very narrow phones: the open menu reaches the word count, so the count
-   steps aside while the menu is open */
-@media (max-width: 360px) {
-  .top-label { transition: opacity 150ms var(--ease-ui); }
-  body:has(.menu.open) .top-label { opacity: 0; }
 }
