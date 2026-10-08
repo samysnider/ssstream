@@ -75,6 +75,26 @@
   <div class="bottom-fade"></div>
 </div>
 
+<!-- ========== VARIATIONS PANEL ========== -->
+<!-- Opens from the left when you click a word: your own alternatives for it -->
+<div class="var-layer" id="varLayer" hidden>
+  <div class="var-backdrop" id="varBackdrop"></div>
+  <aside class="var-panel" id="varPanel" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="varWord">
+    <div class="var-head">
+      <span class="var-label">Variations</span>
+      <button class="var-close" id="varClose" aria-label="Close" title="Close (Esc)">&times;</button>
+    </div>
+    <div class="var-word" id="varWord"></div>
+    <div class="var-count" id="varCount"></div>
+    <ul class="var-list" id="varList"></ul>
+    <form class="var-add" id="varForm" autocomplete="off">
+      <input class="var-input" id="varInput" type="text" placeholder="Add a variation" aria-label="Add a variation" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done">
+      <button class="topbar-btn" type="submit">Add</button>
+    </form>
+    <p class="var-hint" id="varHint">Choose a variation to use it in your text.</p>
+  </aside>
+</div>
+
 <script src="script.js"></script>
 
 </body>
