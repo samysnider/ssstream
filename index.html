@@ -15,15 +15,6 @@
 
 <!-- ========== WRITE SCREEN ========== -->
 <div class="screen active" id="writeScreen">
-  <div class="topbar" id="writeTopbar">
-    <div class="topbar-inner">
-      <div class="topbar-left">
-        <span class="app-name">Stream</span>
-      </div>
-      <span class="word-count" id="wordCount">0 words</span>
-    </div>
-  </div>
-
   <div class="editor-container" id="editorContainer">
     <div class="editor-wrapper">
       <div class="editor" id="editor" contenteditable="true" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></div>
@@ -35,9 +26,14 @@
 
   <div class="bottom-fade"></div>
   <div class="bottom-toolbar">
-    <button class="topbar-btn primary" id="newBtn">New</button>
-    <button class="topbar-btn" id="saveBtn">Save</button>
-    <button class="topbar-btn" id="notesBtn">Notes <span id="notesCount"></span></button>
+    <div class="bottom-toolbar-inner">
+      <div class="toolbar-buttons">
+        <button class="topbar-btn primary" id="newBtn">New</button>
+        <button class="topbar-btn" id="saveBtn">Save</button>
+        <button class="topbar-btn" id="notesBtn">Notes <span id="notesCount"></span></button>
+      </div>
+      <span class="word-count" id="wordCount">0 words</span>
+    </div>
   </div>
 </div>
 
