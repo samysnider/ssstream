@@ -194,6 +194,87 @@ body {
   opacity: 0.55;
 }
 
+/* Focus mode off: every word stays sharp */
+body.no-focus .blur-overlay .w.blurred .t {
+  filter: none;
+  opacity: 1;
+}
+
+/* ---- Focus mode switch ----
+   Small and faint like the rest of the chrome: top right of the writing
+   screen, in the top bar of a saved note */
+.focus-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+  pointer-events: none;
+}
+
+.focus-bar-inner {
+  width: 100%;
+  max-width: 680px;
+  padding: 0 32px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.focus-bar .focus-switch {
+  pointer-events: auto;
+  opacity: 0.35;
+  transition: opacity 0.5s ease;
+}
+.focus-bar .focus-switch:hover,
+.focus-bar .focus-switch:focus-visible { opacity: 1; }
+
+.focus-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border: none;
+  background: none;
+  font-family: var(--font-main);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  color: #86868b;
+  cursor: pointer;
+}
+.focus-switch:hover { color: #1d1d1f; }
+
+.focus-switch-track {
+  position: relative;
+  width: 24px;
+  height: 14px;
+  border-radius: 7px;
+  background: #d2d2d7;
+  transition: background-color 0.2s ease;
+}
+
+.focus-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  transition: translate 0.2s ease;
+}
+
+.focus-switch[aria-checked="true"] .focus-switch-track { background: #1d1d1f; }
+.focus-switch[aria-checked="true"] .focus-switch-thumb { translate: 10px 0; }
+
+@media (max-width: 440px) {
+  .focus-bar-inner { padding: 0 20px; }
+}
+
 /* Hover: a soft highlight, and the word comes into focus so you can read
    what you're about to click */
 .editor.over-word { cursor: pointer; }
@@ -215,13 +296,13 @@ body {
   bottom: -11px; /* a clear gap under the word, still well above the next line */
   translate: -50% 0;
   display: flex;
-  gap: 3px;
+  gap: 2px;
   pointer-events: none;
 }
 
 .blur-overlay .dots i {
-  width: 4px;
-  height: 4px;
+  width: 3px;
+  height: 3px;
   border-radius: 50%;
   background: var(--cursor-color);
   transition: scale 0.15s ease;

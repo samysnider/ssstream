@@ -15,6 +15,16 @@
 
 <!-- ========== WRITE SCREEN ========== -->
 <div class="screen active" id="writeScreen">
+  <!-- Focus mode switch: top right, where the word count used to be -->
+  <div class="focus-bar">
+    <div class="focus-bar-inner">
+      <button class="focus-switch" type="button" role="switch" aria-checked="true" data-focus-switch title="Blur every word but the one you're on">
+        <span class="focus-switch-label">Focus</span>
+        <span class="focus-switch-track" aria-hidden="true"><span class="focus-switch-thumb"></span></span>
+      </button>
+    </div>
+  </div>
+
   <div class="editor-container" id="editorContainer">
     <div class="editor-wrapper">
       <div class="editor" id="editor" contenteditable="true" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></div>
@@ -60,6 +70,10 @@
         <span class="view-topbar-title" id="viewTitle"></span>
       </div>
       <div class="topbar-right">
+        <button class="focus-switch" type="button" role="switch" aria-checked="true" data-focus-switch title="Blur every word but the one you're on">
+          <span class="focus-switch-label">Focus</span>
+          <span class="focus-switch-track" aria-hidden="true"><span class="focus-switch-thumb"></span></span>
+        </button>
         <span class="word-count" id="viewWordCount">0 words</span>
         <button class="topbar-btn" id="exportBtn">Copy as .md</button>
       </div>
