@@ -38,44 +38,142 @@ function getPlainTextFrom(el) {
   return el.innerText || '';
 }
 
+// The editor's text and positions in it. Text nodes count their
+// characters, and each line break (<br>, or a new block from some
+// browsers) counts as one "\n", the same way everywhere below, so a
+// character offset always points at the same spot on screen.
+function walkText(root, visit) {
+  const walk = (el) => {
+    for (const n of el.childNodes) {
+      if (n.nodeType === Node.TEXT_NODE) visit('text', n);
+      else if (n.nodeName === 'BR') visit('br', n);
+      else if (n.nodeType === Node.ELEMENT_NODE) {
+        if (/^(DIV|P)$/.test(n.nodeName) && n.previousSibling) visit('block', n);
+        walk(n);
+      }
+    }
+  };
+  walk(root);
+}
+
+function getEditorText(root) {
+  let text = '';
+  walkText(root, (kind, n) => { text += kind === 'text' ? n.data : '\n'; });
+  return text;
+}
+
+// Character offset of a DOM position (node, offset) inside root
+function offsetOf(root, node, offset) {
+  const target = document.createRange();
+  target.setStart(node, offset);
+  target.collapse(true);
+  let total = 0;
+  let done = false;
+  walkText(root, (kind, n) => {
+    if (done) return;
+    if (kind === 'text') {
+      if (n === node) { total += offset; done = true; return; }
+      if (target.comparePoint(n, n.length) <= 0) total += n.length;
+      else done = true;
+    } else {
+      const parent = n.parentNode;
+      const index = Array.prototype.indexOf.call(parent.childNodes, n);
+      const after = kind === 'br' ? [parent, index + 1] : [n, 0];
+      if (target.comparePoint(after[0], after[1]) <= 0) total += 1;
+      else done = true;
+    }
+  });
+  return total;
+}
+
+// DOM position (node, offset) of a character offset inside root
+function positionAt(root, charOffset) {
+  let remaining = charOffset;
+  let found = null;
+  walkText(root, (kind, n) => {
+    if (found) return;
+    if (kind === 'text') {
+      if (remaining <= n.length) found = { node: n, offset: remaining };
+      else remaining -= n.length;
+    } else {
+      const parent = n.parentNode;
+      const index = Array.prototype.indexOf.call(parent.childNodes, n);
+      if (remaining === 0) found = { node: parent, offset: index };
+      else remaining -= 1;
+    }
+  });
+  return found || { node: root, offset: root.childNodes.length };
+}
+
 function getCaretCharOffsetIn(el) {
   const sel = window.getSelection();
-  if (!sel.rangeCount) return 0;
+  if (!sel.rangeCount) return el._caret ?? -1;
   const range = sel.getRangeAt(0);
-  const preRange = range.cloneRange();
-  preRange.selectNodeContents(el);
-  preRange.setEnd(range.startContainer, range.startOffset);
-  return preRange.toString().length;
+  if (!el.contains(range.startContainer)) return el._caret ?? -1;
+  el._caret = offsetOf(el, range.startContainer, range.startOffset);
+  return el._caret;
+}
+
+// Words: runs of non-space characters. The "core" is the word without
+// the punctuation around it ("be." -> "be"), which is what variations
+// are attached to and what gets replaced.
+function tokenize(text) {
+  const tokens = [];
+  const re = /\S+|\s+/g;
+  let m;
+  while ((m = re.exec(text))) {
+    const t = { text: m[0], start: m.index, end: m.index + m[0].length, word: false };
+    if (!/\s/.test(m[0][0])) {
+      const parts = m[0].match(/^([^\p{L}\p{N}]*)(.*?)([^\p{L}\p{N}]*)$/su);
+      if (parts && parts[2]) {
+        t.word = true;
+        t.lead = parts[1];
+        t.core = parts[2];
+        t.trail = parts[3];
+      }
+    }
+    tokens.push(t);
+  }
+  return tokens;
 }
 
 function updateBlurFor(editorEl, overlayEl, wordCountEl) {
-  const text = getPlainTextFrom(editorEl);
-  const caretPos = getCaretCharOffsetIn(editorEl);
+  const text = getEditorText(editorEl);
 
   if (text.trim() === '') {
     editorEl.innerHTML = '';
     overlayEl.innerHTML = '';
+    editorEl._tokens = [];
     if (wordCountEl) wordCountEl.textContent = '0 words';
     return;
   }
 
-  const words = text.trim().split(/\s+/).filter(w => w.length > 0);
-  const count = words.length;
+  const caretPos = getCaretCharOffsetIn(editorEl);
+  const tokens = tokenize(text);
+  editorEl._tokens = tokens;
+
+  const count = tokens.filter(t => !/\s/.test(t.text[0])).length;
   if (wordCountEl) wordCountEl.textContent = count === 1 ? '1 word' : `${count} words`;
 
-  let start = caretPos;
-  let end = caretPos;
-  while (start > 0 && text[start - 1] !== ' ' && text[start - 1] !== '\n') start--;
-  while (end < text.length && text[end] !== ' ' && text[end] !== '\n') end++;
-
-  const before = text.substring(0, start);
-  const current = text.substring(start, end);
-  const after = text.substring(end);
-
+  // The word under the caret stays sharp, every other one goes soft. Each
+  // word is its own span, so it can be highlighted on hover and carry
+  // dots for its variations (the dots sit outside the blurred text, so
+  // they stay sharp).
   let html = '';
-  if (before) html += `<span class="blurred">${escapeHtml(before)}</span>`;
-  if (current) html += `<span class="clear">${escapeHtml(current)}</span>`;
-  if (after) html += `<span class="blurred">${escapeHtml(after)}</span>`;
+  tokens.forEach((t, i) => {
+    if (/\s/.test(t.text[0])) { html += escapeHtml(t.text); return; }
+    const isCurrent = caretPos >= t.start && caretPos <= t.end;
+    const n = t.word ? Math.min(variationsOf(t.core).length, 5) : 0;
+    const cls = ['w', isCurrent ? 'clear' : 'blurred'];
+    if (i === editorEl._hover) cls.push('hover');
+    let inner = `<span class="t">${escapeHtml(t.text)}</span>`;
+    if (n) {
+      // Dots centered under the word itself, not its punctuation
+      const part = (str) => str ? `<span class="t">${escapeHtml(str)}</span>` : '';
+      inner = `${part(t.lead)}<span class="c"><span class="t">${escapeHtml(t.core)}</span><span class="dots">${'<i></i>'.repeat(n)}</span></span>${part(t.trail)}`;
+    }
+    html += `<span class="${cls.join(' ')}" data-i="${i}">${inner}</span>`;
+  });
   overlayEl.innerHTML = html;
 }
 
@@ -127,6 +225,294 @@ function escapeHtml(str) {
     .replace(/\n/g, '<br>');
 }
 
+function escapeAttr(str) {
+  return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// --- Word variations ---
+// Your own alternatives for a word, kept in groups such as
+// ["big", "large", "huge"]. A word belongs to the group that contains it
+// (ignoring case), so every "big" in every note shares the same
+// variations, and swapping "big" for "large" keeps them. Stored in this
+// browser (localStorage, "stream_variations").
+let variationGroups = null;
+let variationIndex = null; // lowercase word -> its group
+
+function setVariationCache(groups) {
+  variationGroups = groups;
+  variationIndex = new Map();
+  groups.forEach(g => g.forEach(m => variationIndex.set(m.toLocaleLowerCase(), g)));
+}
+
+function loadVariations() {
+  if (variationGroups) return;
+  let groups = [];
+  try {
+    const stored = JSON.parse(localStorage.getItem('stream_variations') || '[]');
+    if (Array.isArray(stored)) groups = stored.filter(g => Array.isArray(g) && g.length > 1);
+  } catch {}
+  setVariationCache(groups);
+}
+
+function saveVariations(groups) {
+  setVariationCache(groups);
+  try { localStorage.setItem('stream_variations', JSON.stringify(groups)); } catch {}
+}
+
+function variationsOf(word) {
+  loadVariations();
+  const key = word.toLocaleLowerCase();
+  const group = variationIndex.get(key);
+  return group ? group.filter(m => m.toLocaleLowerCase() !== key) : [];
+}
+
+function addVariation(word, variation) {
+  variation = variation.trim().replace(/\s+/g, ' ');
+  if (!variation || variation.toLocaleLowerCase() === word.toLocaleLowerCase()) return;
+  loadVariations();
+  let groups = variationGroups.map(g => g.slice());
+  const find = (w) => groups.find(g => g.some(m => m.toLocaleLowerCase() === w.toLocaleLowerCase()));
+  let group = find(word);
+  if (!group) {
+    // "Big" at the start of a sentence is kept as "big", so it can be
+    // offered mid-sentence later; names and acronyms keep their case
+    group = [/^\p{Lu}\p{Ll}*$/u.test(word) ? word.toLocaleLowerCase() : word];
+    groups.push(group);
+  }
+  const other = find(variation);
+  if (other === group) return; // already one of its variations
+  if (other) {
+    // The variation already has variations of its own: join the groups
+    group.push(...other);
+    groups = groups.filter(g => g !== other);
+  } else {
+    group.push(variation);
+  }
+  saveVariations(groups);
+}
+
+function removeVariation(word, variation) {
+  loadVariations();
+  const key = word.toLocaleLowerCase();
+  const groups = variationGroups.map(g =>
+    g.some(m => m.toLocaleLowerCase() === key)
+      ? g.filter(m => m.toLocaleLowerCase() !== variation.toLocaleLowerCase())
+      : g.slice());
+  saveVariations(groups.filter(g => g.length > 1));
+}
+
+// Give a variation the case of the word it replaces: "Big" -> "Large",
+// "BIG" -> "LARGE"
+function matchCase(current, variation) {
+  if (current.length > 1 && current === current.toLocaleUpperCase() && current !== current.toLocaleLowerCase()) {
+    return variation.toLocaleUpperCase();
+  }
+  if (/^\p{Lu}/u.test(current) && /^\p{Ll}/u.test(variation)) {
+    return variation[0].toLocaleUpperCase() + variation.slice(1);
+  }
+  return variation;
+}
+
+// The word under a point on screen, or null. The browser gives the
+// nearest caret position even from far away, so the pointer must also be
+// over the word's own box.
+function wordAtPoint(editorEl, x, y) {
+  let node, offset;
+  if (document.caretPositionFromPoint) {
+    const p = document.caretPositionFromPoint(x, y);
+    if (!p) return null;
+    node = p.offsetNode; offset = p.offset;
+  } else if (document.caretRangeFromPoint) {
+    const r = document.caretRangeFromPoint(x, y);
+    if (!r) return null;
+    node = r.startContainer; offset = r.startOffset;
+  } else {
+    return null;
+  }
+  if (!node || !editorEl.contains(node)) return null;
+  const at = offsetOf(editorEl, node, offset);
+  const tokens = editorEl._tokens || tokenize(getEditorText(editorEl));
+  const index = tokens.findIndex(t => t.word && at >= t.start && at <= t.end);
+  if (index === -1) return null;
+  const token = tokens[index];
+  const a = positionAt(editorEl, token.start);
+  const b = positionAt(editorEl, token.end);
+  const range = document.createRange();
+  range.setStart(a.node, a.offset);
+  range.setEnd(b.node, b.offset);
+  const onWord = [...range.getClientRects()].some(r =>
+    x >= r.left - 2 && x <= r.right + 2 && y >= r.top - 4 && y <= r.bottom + 4);
+  return onWord ? { index, token } : null;
+}
+
+function hasSelectionIn(el) {
+  const sel = window.getSelection();
+  return sel.rangeCount > 0 && !sel.isCollapsed && el.contains(sel.anchorNode);
+}
+
+const varLayer = document.getElementById('varLayer');
+const varBackdrop = document.getElementById('varBackdrop');
+const varClose = document.getElementById('varClose');
+const varWord = document.getElementById('varWord');
+const varCount = document.getElementById('varCount');
+const varList = document.getElementById('varList');
+const varForm = document.getElementById('varForm');
+const varInput = document.getElementById('varInput');
+const varHint = document.getElementById('varHint');
+const varPanel = document.getElementById('varPanel');
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const canHover = window.matchMedia('(hover: hover)');
+
+// The word the panel is about: which editor, where it is in the text.
+// refresh(false) redraws the words (and their dots) without touching the
+// caret, which would pull focus back into the text while the panel is open.
+let varTarget = null;
+
+// Hover highlights a word; a click opens its variations. Option/Alt-click
+// places the caret as usual instead.
+function setupWordVariations(editorEl, overlayEl, refresh) {
+  const setHover = (i) => {
+    if (editorEl._hover === i) return;
+    const previous = overlayEl.querySelector('.w.hover');
+    if (previous) previous.classList.remove('hover');
+    editorEl._hover = i;
+    if (i != null) {
+      const el = overlayEl.querySelector(`.w[data-i="${i}"]`);
+      if (el) el.classList.add('hover');
+    }
+    editorEl.classList.toggle('over-word', i != null);
+  };
+
+  let frame = 0;
+  editorEl.addEventListener('mousemove', (e) => {
+    if (frame) return;
+    frame = requestAnimationFrame(() => {
+      frame = 0;
+      if (e.altKey || !varLayer.hidden || hasSelectionIn(editorEl) || e.buttons) { setHover(null); return; }
+      const hit = wordAtPoint(editorEl, e.clientX, e.clientY);
+      setHover(hit ? hit.index : null);
+    });
+  });
+  editorEl.addEventListener('mouseleave', () => setHover(null));
+  editorEl.addEventListener('keydown', () => setHover(null));
+
+  editorEl.addEventListener('click', (e) => {
+    if (e.altKey || hasSelectionIn(editorEl)) return;
+    const hit = wordAtPoint(editorEl, e.clientX, e.clientY);
+    if (!hit) return;
+    setHover(null);
+    openVariations(editorEl, refresh, hit.token);
+  });
+}
+
+function renderVariations() {
+  const { core } = varTarget;
+  const list = variationsOf(core);
+  varWord.textContent = core;
+  varCount.textContent = list.length === 0 ? 'No variations yet'
+    : list.length === 1 ? '1 variation' : `${list.length} variations`;
+  varList.innerHTML = list.map(v => `
+    <li class="var-item">
+      <button class="var-use" type="button" data-v="${escapeAttr(v)}">${escapeHtml(matchCase(core, v))}</button>
+      <button class="var-remove" type="button" data-v="${escapeAttr(v)}" aria-label="Remove ${escapeAttr(v)}" title="Remove">&times;</button>
+    </li>`).join('');
+  varHint.hidden = list.length === 0;
+}
+
+function openVariations(editorEl, refresh, token) {
+  varTarget = { editorEl, refresh, start: token.start, lead: token.lead, core: token.core };
+  renderVariations();
+  varInput.value = '';
+  varLayer.classList.remove('closing');
+  varLayer.hidden = false;
+  varLayer.classList.add('opening');
+  // With a keyboard and mouse, the field is ready for typing. On a touch
+  // screen, only bring up the keyboard when there's nothing to pick yet;
+  // otherwise focus moves to the panel itself.
+  const hasVariations = !!varList.querySelector('.var-use');
+  const focusTarget = canHover.matches || !hasVariations ? varInput : varPanel;
+  requestAnimationFrame(() => focusTarget.focus({ preventScroll: true }));
+}
+
+function closeVariations({ restoreCaret = true } = {}) {
+  if (varLayer.hidden || varLayer.classList.contains('closing')) return;
+  const target = varTarget;
+  varTarget = null;
+  varLayer.classList.remove('opening');
+  const finish = () => {
+    varLayer.hidden = true;
+    varLayer.classList.remove('closing');
+  };
+  if (reduceMotion.matches) finish();
+  else {
+    varLayer.classList.add('closing');
+    setTimeout(finish, 320);
+  }
+  if (target && restoreCaret) {
+    // Back to the text, with the caret after the word
+    const end = positionAt(target.editorEl, target.start + target.lead.length + target.core.length);
+    target.editorEl.focus({ preventScroll: true });
+    const range = document.createRange();
+    range.setStart(end.node, end.offset);
+    range.collapse(true);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    target.refresh();
+  }
+}
+
+// Replace the word in the text (keeping the punctuation around it). Done
+// as a normal text edit, so Cmd/Ctrl+Z undoes it.
+function useVariation(variation) {
+  const t = varTarget;
+  if (!t) return;
+  const start = t.start + t.lead.length;
+  const a = positionAt(t.editorEl, start);
+  const b = positionAt(t.editorEl, start + t.core.length);
+  t.editorEl.focus({ preventScroll: true });
+  const range = document.createRange();
+  range.setStart(a.node, a.offset);
+  range.setEnd(b.node, b.offset);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  document.execCommand('insertText', false, matchCase(t.core, variation));
+  closeVariations({ restoreCaret: false });
+  requestAnimationFrame(() => t.refresh());
+}
+
+varList.addEventListener('click', (e) => {
+  const remove = e.target.closest('.var-remove');
+  if (remove) {
+    removeVariation(varTarget.core, remove.dataset.v);
+    renderVariations();
+    varTarget.refresh(false);
+    varInput.focus({ preventScroll: true });
+    return;
+  }
+  const use = e.target.closest('.var-use');
+  if (use) useVariation(use.dataset.v);
+});
+
+varForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  if (!varTarget) return;
+  addVariation(varTarget.core, varInput.value);
+  varInput.value = '';
+  renderVariations();
+  varTarget.refresh(false);
+});
+
+varBackdrop.addEventListener('click', () => closeVariations());
+varClose.addEventListener('click', () => closeVariations());
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !varLayer.hidden) {
+    e.preventDefault();
+    closeVariations();
+  }
+});
+
 // --- Wire up main editor ---
 function updateMainBlur() { updateBlurFor(editor, blurOverlay, wordCountEl); }
 function updateMainCursor() { updateCursorFor(editor, editorWrapper, customCursor); }
@@ -163,8 +549,10 @@ function setupKeydown(editorEl, saveFn) {
 }
 
 setupKeydown(editor, saveNote);
+setupWordVariations(editor, blurOverlay, (withCursor = true) => { updateMainBlur(); if (withCursor) updateMainCursor(); });
 
 document.addEventListener('click', (e) => {
+  if (!varLayer.hidden) return;
   if (writeScreen.classList.contains('active') && !e.target.closest('.topbar-btn') && !e.target.closest('.bottom-toolbar')) {
     editor.focus();
   }
@@ -185,6 +573,7 @@ viewEditor.addEventListener('click', () => { updateViewBlur(); updateViewCursor(
 viewEditor.addEventListener('focus', () => { updateViewBlur(); updateViewCursor(); });
 
 setupKeydown(viewEditor, saveViewNote);
+setupWordVariations(viewEditor, viewBlurOverlay, (withCursor = true) => { updateViewBlur(); if (withCursor) updateViewCursor(); });
 
 // --- localStorage Notes ---
 function getNotes() {

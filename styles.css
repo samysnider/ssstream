@@ -176,14 +176,54 @@ body {
   z-index: 1;
 }
 
-.blur-overlay .blurred {
+.blur-overlay .w,
+.blur-overlay .w .c {
+  position: relative;
+  border-radius: 6px;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Only the letters blur, so the variation dots under a word stay sharp */
+.blur-overlay .w .t {
   color: var(--text-color);
+  transition: filter 0.2s ease, opacity 0.2s ease;
+}
+
+.blur-overlay .w.blurred .t {
   filter: blur(1.5px);
   opacity: 0.55;
 }
 
-.blur-overlay .clear {
-  color: var(--text-color);
+/* Hover: a soft highlight, and the word comes into focus so you can read
+   what you're about to click */
+.editor.over-word { cursor: pointer; }
+
+.blur-overlay .w.hover {
+  background-color: #f2f2f4;
+  box-shadow: 0 0 0 4px #f2f2f4;
+}
+
+.blur-overlay .w.hover .t {
+  filter: none;
+  opacity: 1;
+}
+
+/* One small dot per variation (up to 5), centered under the word */
+.blur-overlay .dots {
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  translate: -50% 0;
+  display: flex;
+  gap: 3px;
+  pointer-events: none;
+}
+
+.blur-overlay .dots i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--cursor-color);
 }
 
 .editor-wrapper {
@@ -399,3 +439,177 @@ body {
 .screen { display: none; }
 .screen.active { display: flex; flex-direction: column; align-items: center; width: 100%; height: 100%; }
 
+/* ---- Word variations panel ----
+   Slides in from the left over a softly dimmed page; slides back out on
+   close. */
+.var-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+.var-layer[hidden] { display: none; }
+.var-layer.closing { pointer-events: none; }
+
+.var-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(29, 29, 31, 0.12);
+}
+
+.var-panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: min(360px, 88vw);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 28px 32px;
+  overflow-y: auto;
+  background: var(--bg);
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.06), 12px 0 40px rgba(0, 0, 0, 0.10);
+  font-family: var(--font-main);
+}
+
+.var-panel:focus { outline: none; }
+
+.var-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.var-label {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #86868b;
+}
+
+.var-close {
+  width: 32px;
+  height: 32px;
+  margin-right: -8px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  font-size: 22px;
+  line-height: 1;
+  color: #86868b;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.var-close:hover { background: #f5f5f7; color: #1d1d1f; }
+
+.var-word {
+  font-size: 32px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: #1d1d1f;
+  overflow-wrap: anywhere;
+}
+
+.var-count {
+  margin: 6px 0 20px;
+  font-size: 13px;
+  font-weight: 300;
+  color: #86868b;
+}
+
+.var-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 -12px 20px;
+}
+
+.var-list:empty { display: none; }
+
+.var-item {
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+.var-item:hover { background: #f5f5f7; }
+
+.var-use {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: none;
+  background: none;
+  font-family: var(--font-main);
+  font-size: 18px;
+  text-align: left;
+  color: #1d1d1f;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.var-remove {
+  width: 32px;
+  height: 32px;
+  margin-right: 4px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  font-size: 18px;
+  color: #aeaeb2;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+.var-item:hover .var-remove,
+.var-remove:focus-visible { opacity: 1; }
+.var-remove:hover { color: #ff3b30; }
+
+/* Touch screens have no hover: keep the remove buttons visible */
+@media (hover: none) {
+  .var-remove { opacity: 1; }
+}
+
+.var-add {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.var-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 0;
+  border: none;
+  border-bottom: 1px solid #d2d2d7;
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--font-main);
+  font-size: 16px; /* 16px keeps iOS from zooming in on focus */
+  color: #1d1d1f;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+.var-input:focus { border-bottom-color: #1d1d1f; }
+.var-input::placeholder { color: #aeaeb2; }
+
+.var-hint {
+  margin-top: 16px;
+  font-size: 12px;
+  font-weight: 300;
+  color: #aeaeb2;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .var-layer.opening .var-panel { animation: var-slide-in 460ms cubic-bezier(0.32, 0.72, 0, 1) both; }
+  .var-layer.opening .var-backdrop { animation: var-fade-in 460ms ease both; }
+  .var-layer.closing .var-panel { animation: var-slide-out 300ms cubic-bezier(0.32, 0.72, 0, 1) forwards; }
+  .var-layer.closing .var-backdrop { animation: var-fade-out 300ms ease forwards; }
+}
+
+@keyframes var-slide-in { from { transform: translateX(-100%); } }
+@keyframes var-slide-out { to { transform: translateX(-100%); } }
+@keyframes var-fade-in { from { opacity: 0; } }
+@keyframes var-fade-out { to { opacity: 0; } }
