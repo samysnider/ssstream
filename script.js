@@ -149,10 +149,12 @@ function tokenize(text) {
 }
 
 // --- Markdown ---
-// The text stays plain Markdown: it's only styled as you write. The
-// editor (invisible, it holds the caret) and the overlay (what you see)
-// get exactly the same styling, so their letters line up. Markers (#,
-// **, >, ...) stay visible in light grey, so they can be edited normally.
+// Notes are plain text that may contain Markdown. On screen it's shown
+// exactly as typed; the Markdown is only used to lay out the PDF export
+// (see "Export to PDF"). The editor and overlay are still split into
+// lines and styled runs (classes with no on-screen styling), which keeps
+// both layers' structure identical and lets the editor show a final
+// empty line reliably.
 const MD_BOLD = 1, MD_ITALIC = 2, MD_CODE = 4, MD_STRIKE = 8, MD_MARK = 16, MD_URL = 32, MD_LINK = 64;
 const MD_CLASSES = [[MD_BOLD, 'md-b'], [MD_ITALIC, 'md-i'], [MD_CODE, 'md-code'], [MD_STRIKE, 'md-s'],
   [MD_MARK, 'md-mark'], [MD_URL, 'md-url'], [MD_LINK, 'md-link']];
@@ -190,7 +192,7 @@ function parseMarkdown(text) {
       body = m[0].length;
     } else if ((m = line.match(/^(\s*)([-*+]|\d+[.)])(\s+)/))) {
       cls = 'md-li';
-      mark(m[1].length, m[1].length + m[2].length);
+      mark(m[1].length, m[0].length);
       body = m[0].length;
     }
     parseInline(line, body, flags);
@@ -1103,7 +1105,7 @@ function renderArchives() {
   }
 
   archivesList.innerHTML = notes.map(note => {
-    const preview = stripMarkdown(note.text).trim().replace(/\s*\n\s*/g, ' ').substring(0, 80);
+    const preview = note.text.trim().replace(/\s*\n\s*/g, ' ').substring(0, 80);
     return `
       <li class="archive-item" data-id="${note.id}">
         <div class="archive-item-left">
@@ -1242,6 +1244,118 @@ focusSwitches.forEach(sw => sw.addEventListener('click', () => {
 let savedFocus = 'on';
 try { savedFocus = localStorage.getItem('stream_focus') || 'on'; } catch {}
 setFocusMode(savedFocus !== 'off');
+
+// --- Export to PDF ---
+// The note is laid out as a clean document (real headings, lists, quotes;
+// no Markdown markers) and handed to the browser's print dialog, where
+// "Save as PDF" makes the file. The PDF keeps selectable text.
+function inlineHtml(line) {
+  const f = line.flags;
+  let html = '';
+  let i = 0;
+  while (i < line.text.length) {
+    if (f[i] & MD_MARK) { i++; continue; }
+    if (f[i] & MD_LINK) {
+      let j = i;
+      while (j < line.text.length && (f[j] & MD_LINK)) j++;
+      let u = j;
+      while (u < line.text.length && !(f[u] & MD_URL)) u++;
+      let v = u;
+      while (v < line.text.length && (f[v] & MD_URL)) v++;
+      const href = line.text.slice(u, v);
+      const safe = /^(https?:|mailto:)/i.test(href) ? href : '';
+      const text = escapeText(line.text.slice(i, j));
+      html += safe ? `<a href="${escapeAttr(safe)}">${text}</a>` : text;
+      i = j;
+      continue;
+    }
+    const style = f[i];
+    let j = i + 1;
+    while (j < line.text.length && f[j] === style && !(f[j] & MD_MARK)) j++;
+    let piece = escapeText(line.text.slice(i, j));
+    if (style & MD_CODE) piece = `<code>${piece}</code>`;
+    if (style & MD_STRIKE) piece = `<s>${piece}</s>`;
+    if (style & MD_ITALIC) piece = `<em>${piece}</em>`;
+    if (style & MD_BOLD) piece = `<strong>${piece}</strong>`;
+    html += piece;
+    i = j;
+  }
+  return html;
+}
+
+function markdownToHtml(text) {
+  const lines = parseMarkdown(text);
+  let html = '';
+  let paragraph = [];
+  let list = null; // { tag, items }
+  let quote = [];
+  let code = null;
+  const flush = () => {
+    if (paragraph.length) html += `<p>${paragraph.join('<br>')}</p>`;
+    if (list) html += `<${list.tag}>${list.items.map(x => `<li>${x}</li>`).join('')}</${list.tag}>`;
+    if (quote.length) html += `<blockquote><p>${quote.join('<br>')}</p></blockquote>`;
+    paragraph = []; list = null; quote = [];
+  };
+  lines.forEach(l => {
+    if (l.cls === 'md-codeblock') {
+      if (/^\s*(```|~~~)/.test(l.text)) {
+        if (code) { html += `<pre><code>${escapeText(code.join('\n'))}</code></pre>`; code = null; }
+        else { flush(); code = []; }
+      } else if (code) code.push(l.text);
+      return;
+    }
+    const heading = l.cls.match(/^md-h(\d)$/);
+    if (heading) { flush(); html += `<h${heading[1]}>${inlineHtml(l)}</h${heading[1]}>`; return; }
+    if (l.cls === 'md-hr') { flush(); html += '<hr>'; return; }
+    if (l.cls === 'md-quote') {
+      if (paragraph.length || list) flush();
+      quote.push(inlineHtml(l));
+      return;
+    }
+    if (l.cls === 'md-li') {
+      const tag = /^\s*\d/.test(l.text) ? 'ol' : 'ul';
+      if (paragraph.length || quote.length || (list && list.tag !== tag)) flush();
+      if (!list) list = { tag, items: [] };
+      list.items.push(inlineHtml(l));
+      return;
+    }
+    if (!l.text.trim()) { flush(); return; }
+    if (list || quote.length) flush();
+    paragraph.push(inlineHtml(l));
+  });
+  if (code) html += `<pre><code>${escapeText(code.join('\n'))}</code></pre>`;
+  flush();
+  return html;
+}
+
+const printArea = document.getElementById('printArea');
+
+function exportPdf(text) {
+  if (!text.trim()) return;
+  printArea.innerHTML = markdownToHtml(text);
+  // The browser suggests the page title as the file name: use the note's
+  // first line
+  const firstLine = stripMarkdown(text).split('\n').map(s => s.trim()).find(Boolean) || 'Note';
+  const previousTitle = document.title;
+  document.title = firstLine.slice(0, 80);
+  const restore = () => {
+    document.title = previousTitle;
+    printArea.innerHTML = '';
+    window.removeEventListener('afterprint', restore);
+  };
+  window.addEventListener('afterprint', restore);
+  window.print();
+}
+
+document.getElementById('pdfBtn').addEventListener('click', () => {
+  updateMainBlur();
+  exportPdf(getEditorText(editor));
+});
+
+document.getElementById('viewPdfBtn').addEventListener('click', () => {
+  saveViewNote();
+  exportPdf(getEditorText(viewEditor));
+});
 
 // --- Init ---
 updateNotesCount();

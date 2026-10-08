@@ -354,29 +354,6 @@ body.no-focus .blur-overlay .w.blurred .t {
   position: relative;
 }
 
-/* ---- Markdown ----
-   Sizes and weights apply to both the editor and the overlay, so their
-   letters line up; colors and backgrounds only to the overlay (the editor
-   is invisible). Markers stay visible in light grey. */
-.md-h1 { font-size: 1.6em; font-weight: 700; line-height: 1.4; letter-spacing: -0.02em; }
-.md-h2 { font-size: 1.35em; font-weight: 700; line-height: 1.45; letter-spacing: -0.015em; }
-.md-h3 { font-size: 1.15em; font-weight: 650; line-height: 1.55; }
-.md-h4, .md-h5, .md-h6 { font-weight: 650; }
-.md-quote { font-style: italic; }
-.md-b { font-weight: 700; }
-.md-i { font-style: italic; }
-.md-code,
-.md-codeblock {
-  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-  font-size: 0.82em;
-}
-.md-codeblock .md-code { font-size: 1em; }
-
-.blur-overlay .md-mark { color: #c7c7cc; }
-.blur-overlay .md-quote { color: #6e6e73; }
-.blur-overlay .md-s { text-decoration: line-through; text-decoration-thickness: 1.5px; }
-.blur-overlay .md-link { text-decoration: underline; text-decoration-color: #c7c7cc; text-underline-offset: 3px; }
-.blur-overlay .md-code { background: #f2f2f4; border-radius: 4px; }
 
 /* Custom cursor */
 .custom-cursor {
@@ -761,3 +738,90 @@ body.no-focus .blur-overlay .w.blurred .t {
 @keyframes var-slide-out { to { transform: translateX(-100%); } }
 @keyframes var-fade-in { from { opacity: 0; } }
 @keyframes var-fade-out { to { opacity: 0; } }
+
+/* ---- Export to PDF (print) ----
+   On screen the print area is hidden; when printing, it's the only thing
+   on the page: the note as a clean, typeset document. */
+.print-area { display: none; }
+
+@media print {
+  @page { margin: 22mm 20mm; }
+
+  html, body {
+    height: auto;
+    overflow: visible;
+    background: #fff;
+  }
+
+  body > *:not(.print-area) { display: none !important; }
+
+  .print-area {
+    display: block;
+    font-family: var(--font-main);
+    font-size: 11.5pt;
+    line-height: 1.6;
+    color: #1d1d1f;
+  }
+
+  .print-area h1, .print-area h2, .print-area h3,
+  .print-area h4, .print-area h5, .print-area h6 {
+    line-height: 1.25;
+    margin: 1.4em 0 0.5em;
+    break-after: avoid;
+  }
+  .print-area > :first-child { margin-top: 0; }
+  .print-area h1 { font-size: 24pt; font-weight: 700; letter-spacing: -0.02em; }
+  .print-area h2 { font-size: 17pt; font-weight: 700; }
+  .print-area h3 { font-size: 13.5pt; font-weight: 650; }
+  .print-area h4, .print-area h5, .print-area h6 { font-size: 11.5pt; font-weight: 650; }
+
+  .print-area p,
+  .print-area ul,
+  .print-area ol,
+  .print-area blockquote,
+  .print-area pre { margin: 0 0 0.9em; }
+
+  .print-area ul, .print-area ol { padding-left: 1.4em; }
+  .print-area li { margin: 0.2em 0; }
+
+  .print-area blockquote {
+    padding-left: 1em;
+    border-left: 2px solid #d2d2d7;
+    color: #515154;
+    font-style: italic;
+  }
+  .print-area blockquote p { margin: 0; }
+
+  .print-area code {
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 0.9em;
+    padding: 0.1em 0.3em;
+    border-radius: 3px;
+    background: #f2f2f4;
+  }
+  .print-area pre {
+    padding: 0.8em 1em;
+    border-radius: 6px;
+    background: #f5f5f7;
+    white-space: pre-wrap;
+    break-inside: avoid;
+  }
+  .print-area pre code { padding: 0; background: none; }
+
+  .print-area hr {
+    margin: 1.6em 0;
+    border: none;
+    border-top: 1px solid #d2d2d7;
+  }
+
+  .print-area a { color: inherit; text-decoration: underline; text-decoration-color: #aeaeb2; }
+}
+
+/* Small phones: a saved note's top bar holds Back, Focus, the word count,
+   Copy and PDF, so the date and the "Focus" label step aside */
+@media (max-width: 440px) {
+  #viewTopbar .topbar-inner { padding: 0 16px; }
+  #viewTopbar .topbar-right { gap: 10px; }
+  #viewTopbar .view-topbar-title,
+  #viewTopbar .focus-switch-label { display: none; }
+}

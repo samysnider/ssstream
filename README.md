@@ -4,9 +4,13 @@ A minimal writing app — plain HTML, CSS and JS (`index.html`, `styles.css`, `s
 
 Live: https://ssstream.vercel.app/
 
-## Markdown
+## Export to PDF
 
-Write in Markdown and it's styled as you type: `# Title` to `###### Title` for headings, `**bold**`, `*italic*`, `***both***`, `~~strikethrough~~`, `` `code` ``, `> quotes`, `- lists` and `1. lists`, `[links](url)`, `---` and ```` ``` ```` code blocks. The Markdown markers stay visible in light grey, so the text is always plain Markdown: "Copy as .md" copies it as is, and the notes list shows it without the markers.
+**PDF** (in the bottom bar, and next to "Copy as .md" on a saved note) exports the note as a clean, typeset document. On screen your text stays plain, exactly as typed; in the PDF, Markdown becomes real formatting: `# Title` to `###### Title` for headings, `**bold**`, `*italic*`, `~~strikethrough~~`, `` `code` ``, `> quotes`, `- lists` and `1. lists`, `[links](url)`, `---` and ```` ``` ```` code blocks, without the markers.
+
+It opens your browser's print dialog: choose "Save as PDF" (on iPhone, share or save to Files from the print sheet). Untick "Headers and footers" there for a page with nothing but your text. The suggested file name is the note's first line.
+
+## Undo
 
 Undo and redo (Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z) are Stream's own: typing is undone a word at a time, and undoing a deletion also brings back the word's variations.
 

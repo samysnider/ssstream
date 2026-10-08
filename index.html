@@ -41,6 +41,7 @@
         <button class="topbar-btn primary" id="newBtn">New</button>
         <button class="topbar-btn" id="saveBtn">Save</button>
         <button class="topbar-btn" id="notesBtn">Notes <span id="notesCount"></span></button>
+        <button class="topbar-btn" id="pdfBtn" title="Export as PDF">PDF</button>
       </div>
       <span class="word-count" id="wordCount">0 words</span>
     </div>
@@ -76,6 +77,7 @@
         </button>
         <span class="word-count" id="viewWordCount">0 words</span>
         <button class="topbar-btn" id="exportBtn">Copy as .md</button>
+        <button class="topbar-btn" id="viewPdfBtn" title="Export as PDF">PDF</button>
       </div>
     </div>
   </div>
@@ -111,6 +113,9 @@
     <p class="var-hint" id="varHint">Choose a variation to use it in your text.</p>
   </aside>
 </div>
+
+<!-- What gets printed (and saved as PDF): the note, formatted -->
+<article class="print-area" id="printArea" aria-hidden="true"></article>
 
 <script src="script.js"></script>
 
