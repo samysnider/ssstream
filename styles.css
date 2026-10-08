@@ -7,10 +7,39 @@
  * everyday actions and slower motion for rare moments (the notes sheet).
  */
 
-/* Type: Space Mono for the writing (a typewriter feel, one word in focus at
-   a time), Bricolage Grotesque for the interface (variable weight and
-   optical size; its ink traps show at large sizes, calmer when small) */
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Space+Mono:wght@400;700&display=swap');
+/* Type: iA Writer Quattro for everything, the writing and the interface.
+   A "quattrospace" from iA (based on IBM Plex): mostly even widths like a
+   typewriter, with the few letters that look cramped in a mono (m, w...)
+   given more room. Bundled in fonts/ (SIL Open Font License, see
+   fonts/LICENSE.md); it comes in Regular and Bold, with italics. */
+@font-face {
+  font-family: 'iA Writer Quattro';
+  src: url('fonts/iAWriterQuattroS-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'iA Writer Quattro';
+  src: url('fonts/iAWriterQuattroS-Italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'iA Writer Quattro';
+  src: url('fonts/iAWriterQuattroS-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'iA Writer Quattro';
+  src: url('fonts/iAWriterQuattroS-BoldItalic.woff2') format('woff2');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
 
 *, *::before, *::after {
   margin: 0;
@@ -29,8 +58,8 @@
   --placeholder: #c8c7c2;  /* "Start writing..." */
   --accent: #ff670d;       /* orange: cursor, Save, the dot next to "Notes" */
 
-  --font: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-  --font-writing: 'Space Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font: 'iA Writer Quattro', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  --font-writing: 'iA Writer Quattro', ui-monospace, 'SF Mono', Menlo, monospace;
 
   --column: 680px;         /* writing column */
   --gutter: 32px;          /* writing column's side padding */
@@ -66,7 +95,6 @@ html, body {
   background-color: var(--bg);
   color: var(--text);
   font-family: var(--font);
-  font-optical-sizing: auto;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
@@ -568,7 +596,7 @@ body.can-share .archive-item-end { min-width: 98px; }
   align-items: baseline;
   padding: 0 12px 16px;
   font-size: 17px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.01em;
 }
 
@@ -650,7 +678,7 @@ body.can-share .archive-item-end { min-width: 98px; }
 
 .archive-item-title {
   color: var(--text);
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .archive-item-end {
