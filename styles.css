@@ -212,7 +212,7 @@ body {
 .blur-overlay .dots {
   position: absolute;
   left: 50%;
-  bottom: -5px;
+  bottom: -11px; /* a clear gap under the word, still well above the next line */
   translate: -50% 0;
   display: flex;
   gap: 3px;
@@ -224,6 +224,49 @@ body {
   height: 4px;
   border-radius: 50%;
   background: var(--cursor-color);
+  transition: scale 0.15s ease;
+}
+
+/* Pointer over the dots: they grow a little while the preview shows */
+.blur-overlay .dots.active i { scale: 1.35; }
+
+.editor.over-dots { cursor: help; }
+
+/* Preview card: the word's variations, under its dots */
+.var-preview {
+  position: fixed;
+  z-index: 40;
+  max-width: min(280px, calc(100vw - 24px));
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--bg);
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 6px 20px rgba(0, 0, 0, 0.10);
+  font-family: var(--font-main);
+  font-size: 15px;
+  line-height: 1.5;
+  color: #1d1d1f;
+  pointer-events: none;
+}
+.var-preview[hidden] { display: none; }
+
+.var-preview-label {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #86868b;
+}
+
+.var-preview ul { list-style: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .var-preview { animation: var-preview-in 160ms ease both; }
+}
+
+@keyframes var-preview-in {
+  from { opacity: 0; translate: 0 -4px; }
 }
 
 .editor-wrapper {

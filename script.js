@@ -370,6 +370,61 @@ let varTarget = null;
 
 // Hover highlights a word; a click opens its variations. Option/Alt-click
 // places the caret as usual instead.
+// --- Variations preview ---
+// Hovering a word's dots (tapping them on a touch screen) shows its
+// variations in a small card under the dots, without opening the panel.
+const varPreview = document.getElementById('varPreview');
+let previewDots = null;
+
+// The dots under a point on screen (with a few pixels of slack, they're
+// small), as { index, token, dots }, or null
+function dotsAtPoint(editorEl, overlayEl, x, y) {
+  for (const dots of overlayEl.querySelectorAll('.dots')) {
+    const r = dots.getBoundingClientRect();
+    if (x >= r.left - 6 && x <= r.right + 6 && y >= r.top - 5 && y <= r.bottom + 7) {
+      const index = Number(dots.closest('.w').dataset.i);
+      const token = editorEl._tokens && editorEl._tokens[index];
+      if (token && token.word) return { index, token, dots };
+    }
+  }
+  return null;
+}
+
+function showPreview(hit) {
+  if (previewDots === hit.dots && !varPreview.hidden) return;
+  hidePreview();
+  const list = variationsOf(hit.token.core).map(v => matchCase(hit.token.core, v));
+  if (!list.length) return;
+  varPreview.innerHTML = `<span class="var-preview-label">Variations</span><ul>${list.map(v => `<li>${escapeHtml(v)}</li>`).join('')}</ul>`;
+  varPreview.hidden = false;
+  hit.dots.classList.add('active');
+  previewDots = hit.dots;
+  // Centered under the dots, kept inside the window; above them if there's
+  // no room below
+  const d = hit.dots.getBoundingClientRect();
+  const card = varPreview.getBoundingClientRect();
+  const left = Math.min(Math.max(12, d.left + d.width / 2 - card.width / 2), window.innerWidth - card.width - 12);
+  const below = d.bottom + 8;
+  const top = below + card.height > window.innerHeight - 12 ? d.top - 8 - card.height : below;
+  varPreview.style.left = `${Math.round(left)}px`;
+  varPreview.style.top = `${Math.round(top)}px`;
+}
+
+function hidePreview() {
+  if (previewDots) previewDots.classList.remove('active');
+  previewDots = null;
+  varPreview.hidden = true;
+}
+
+// Touch and pen taps show the preview; a mouse click opens the panel
+let lastPointerType = 'mouse';
+document.addEventListener('pointerdown', (e) => {
+  lastPointerType = e.pointerType || 'mouse';
+  if (!varPreview.hidden) hidePreview();
+}, true);
+document.addEventListener('scroll', hidePreview, true);
+window.addEventListener('resize', hidePreview);
+
 function setupWordVariations(editorEl, overlayEl, refresh) {
   const setHover = (i) => {
     if (editorEl._hover === i) return;
@@ -388,17 +443,39 @@ function setupWordVariations(editorEl, overlayEl, refresh) {
     if (frame) return;
     frame = requestAnimationFrame(() => {
       frame = 0;
-      if (e.altKey || !varLayer.hidden || hasSelectionIn(editorEl) || e.buttons) { setHover(null); return; }
+      if (e.altKey || !varLayer.hidden || hasSelectionIn(editorEl) || e.buttons) {
+        setHover(null);
+        hidePreview();
+        editorEl.classList.remove('over-dots');
+        return;
+      }
+      const dots = dotsAtPoint(editorEl, overlayEl, e.clientX, e.clientY);
+      editorEl.classList.toggle('over-dots', !!dots);
+      if (dots) {
+        setHover(dots.index);
+        showPreview(dots);
+        return;
+      }
+      hidePreview();
       const hit = wordAtPoint(editorEl, e.clientX, e.clientY);
       setHover(hit ? hit.index : null);
     });
   });
-  editorEl.addEventListener('mouseleave', () => setHover(null));
-  editorEl.addEventListener('keydown', () => setHover(null));
+  editorEl.addEventListener('mouseleave', () => {
+    setHover(null);
+    hidePreview();
+    editorEl.classList.remove('over-dots');
+  });
+  editorEl.addEventListener('keydown', () => { setHover(null); hidePreview(); });
 
   editorEl.addEventListener('click', (e) => {
     if (e.altKey || hasSelectionIn(editorEl)) return;
-    const hit = wordAtPoint(editorEl, e.clientX, e.clientY);
+    const dots = dotsAtPoint(editorEl, overlayEl, e.clientX, e.clientY);
+    if (dots && lastPointerType !== 'mouse') {
+      showPreview(dots);
+      return;
+    }
+    const hit = dots || wordAtPoint(editorEl, e.clientX, e.clientY);
     if (!hit) return;
     setHover(null);
     openVariations(editorEl, refresh, hit.token);
@@ -420,6 +497,7 @@ function renderVariations() {
 }
 
 function openVariations(editorEl, refresh, token) {
+  hidePreview();
   varTarget = { editorEl, refresh, start: token.start, lead: token.lead, core: token.core };
   renderVariations();
   varInput.value = '';
