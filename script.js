@@ -144,6 +144,8 @@ function updateBlurFor(editorEl, overlayEl, wordCountEl) {
     editorEl.innerHTML = '';
     overlayEl.innerHTML = '';
     editorEl._tokens = [];
+    editorEl._anchors = [];
+    editorEl._text = '';
     if (wordCountEl) wordCountEl.textContent = '0 words';
     return;
   }
@@ -151,6 +153,15 @@ function updateBlurFor(editorEl, overlayEl, wordCountEl) {
   const caretPos = getCaretCharOffsetIn(editorEl);
   const tokens = tokenize(text);
   editorEl._tokens = tokens;
+
+  // Keep each word's variations attached to it through the edit, and let
+  // go of any whose word was changed (e.g. a letter typed onto it)
+  trackAnchors(editorEl, text, caretPos);
+  const wordAt = new Map(tokens.filter(t => t.word).map(t => [t.start + t.lead.length, t]));
+  editorEl._anchors = anchorsOf(editorEl).filter(a => {
+    const t = wordAt.get(a.start);
+    return t && a.end === a.start + t.core.length;
+  });
 
   const count = tokens.filter(t => !/\s/.test(t.text[0])).length;
   if (wordCountEl) wordCountEl.textContent = count === 1 ? '1 word' : `${count} words`;
@@ -163,7 +174,7 @@ function updateBlurFor(editorEl, overlayEl, wordCountEl) {
   tokens.forEach((t, i) => {
     if (/\s/.test(t.text[0])) { html += escapeHtml(t.text); return; }
     const isCurrent = caretPos >= t.start && caretPos <= t.end;
-    const n = t.word ? Math.min(variationsOf(t.core).length, 5) : 0;
+    const n = t.word ? Math.min(variationsFor(editorEl, t.start + t.lead.length, t.core).length, 5) : 0;
     const cls = ['w', isCurrent ? 'clear' : 'blurred'];
     if (i === editorEl._hover) cls.push('hover');
     let inner = `<span class="t">${escapeHtml(t.text)}</span>`;
@@ -230,76 +241,103 @@ function escapeAttr(str) {
 }
 
 // --- Word variations ---
-// Your own alternatives for a word, kept in groups such as
-// ["big", "large", "huge"]. A word belongs to the group that contains it
-// (ignoring case), so every "big" in every note shares the same
-// variations, and swapping "big" for "large" keeps them. Stored in this
-// browser (localStorage, "stream_variations").
-let variationGroups = null;
-let variationIndex = null; // lowercase word -> its group
-
-function setVariationCache(groups) {
-  variationGroups = groups;
-  variationIndex = new Map();
-  groups.forEach(g => g.forEach(m => variationIndex.set(m.toLocaleLowerCase(), g)));
+// Variations belong to one word, at one place, in one note (not to a
+// spelling). Each editor keeps a list of anchors { start, end, group }:
+// [start, end) is the word in the text, and group holds the word and its
+// variations, e.g. ["big", "large", "huge"]. When the text changes,
+// anchors after the change shift along; an anchor whose word is deleted
+// or retyped is dropped, and its variations with it. Swapping the word
+// for one of its own variations (or undoing that swap) keeps it. The
+// anchors are saved with the note.
+function sameWord(a, b) {
+  return a.toLocaleLowerCase() === b.toLocaleLowerCase();
 }
 
-function loadVariations() {
-  if (variationGroups) return;
-  let groups = [];
-  try {
-    const stored = JSON.parse(localStorage.getItem('stream_variations') || '[]');
-    if (Array.isArray(stored)) groups = stored.filter(g => Array.isArray(g) && g.length > 1);
-  } catch {}
-  setVariationCache(groups);
+function anchorsOf(editorEl) {
+  if (!editorEl._anchors) editorEl._anchors = [];
+  return editorEl._anchors;
 }
 
-function saveVariations(groups) {
-  setVariationCache(groups);
-  try { localStorage.setItem('stream_variations', JSON.stringify(groups)); } catch {}
+// Load anchors (from a saved note), checking each still fits its text
+function setAnchors(editorEl, anchors, text) {
+  editorEl._text = text;
+  editorEl._anchors = (Array.isArray(anchors) ? anchors : [])
+    .filter(a => a && Number.isInteger(a.start) && Number.isInteger(a.end) && Array.isArray(a.group)
+      && a.group.length > 1 && a.group.some(m => sameWord(m, text.slice(a.start, a.end))))
+    .map(a => ({ start: a.start, end: a.end, group: a.group.slice() }));
 }
 
-function variationsOf(word) {
-  loadVariations();
-  const key = word.toLocaleLowerCase();
-  const group = variationIndex.get(key);
-  return group ? group.filter(m => m.toLocaleLowerCase() !== key) : [];
+function serializeAnchors(editorEl) {
+  return anchorsOf(editorEl).map(a => ({ start: a.start, end: a.end, group: a.group.slice() }));
 }
 
-function addVariation(word, variation) {
+// Follow an edit: compare the text before and after to find the part
+// that changed. The caret (where typing or deleting just happened) breaks
+// ties when the same letters repeat, e.g. deleting the first of two
+// identical words.
+function trackAnchors(editorEl, text, caret) {
+  const before = editorEl._text;
+  editorEl._text = text;
+  const anchors = editorEl._anchors;
+  if (!anchors || !anchors.length || before === undefined || before === text) return;
+  const max = Math.min(before.length, text.length);
+  let p = 0;
+  while (p < max && before[p] === text[p]) p++;
+  if (caret >= 0) p = Math.min(p, caret);
+  let sfx = 0;
+  while (sfx < max - p && before[before.length - 1 - sfx] === text[text.length - 1 - sfx]) sfx++;
+  const changedEnd = before.length - sfx; // end of the changed part, in the old text
+  const delta = text.length - before.length;
+  editorEl._anchors = anchors.filter(a => {
+    if (a.end <= p) return true; // before the change
+    if (a.start >= changedEnd) { // after it: shift along
+      a.start += delta;
+      a.end += delta;
+      return true;
+    }
+    // The change is inside the word: keep it only if the word became one
+    // of its own variations
+    if (a.start <= p && changedEnd <= a.end) {
+      const end = a.end + delta;
+      if (a.group.some(m => sameWord(m, text.slice(a.start, end)))) {
+        a.end = end;
+        return true;
+      }
+    }
+    return false;
+  });
+}
+
+function anchorFor(editorEl, coreStart, core) {
+  return anchorsOf(editorEl).find(a => a.start === coreStart && a.end === coreStart + core.length) || null;
+}
+
+function variationsFor(editorEl, coreStart, core) {
+  const a = anchorFor(editorEl, coreStart, core);
+  return a ? a.group.filter(m => !sameWord(m, core)) : [];
+}
+
+function addVariation(editorEl, coreStart, core, variation) {
   variation = variation.trim().replace(/\s+/g, ' ');
-  if (!variation || variation.toLocaleLowerCase() === word.toLocaleLowerCase()) return;
-  loadVariations();
-  let groups = variationGroups.map(g => g.slice());
-  const find = (w) => groups.find(g => g.some(m => m.toLocaleLowerCase() === w.toLocaleLowerCase()));
-  let group = find(word);
-  if (!group) {
-    // "Big" at the start of a sentence is kept as "big", so it can be
-    // offered mid-sentence later; names and acronyms keep their case
-    group = [/^\p{Lu}\p{Ll}*$/u.test(word) ? word.toLocaleLowerCase() : word];
-    groups.push(group);
+  if (!variation || sameWord(variation, core)) return;
+  let a = anchorFor(editorEl, coreStart, core);
+  if (!a) {
+    a = { start: coreStart, end: coreStart + core.length, group: [core] };
+    anchorsOf(editorEl).push(a);
   }
-  const other = find(variation);
-  if (other === group) return; // already one of its variations
-  if (other) {
-    // The variation already has variations of its own: join the groups
-    group.push(...other);
-    groups = groups.filter(g => g !== other);
-  } else {
-    group.push(variation);
-  }
-  saveVariations(groups);
+  if (!a.group.some(m => sameWord(m, variation))) a.group.push(variation);
 }
 
-function removeVariation(word, variation) {
-  loadVariations();
-  const key = word.toLocaleLowerCase();
-  const groups = variationGroups.map(g =>
-    g.some(m => m.toLocaleLowerCase() === key)
-      ? g.filter(m => m.toLocaleLowerCase() !== variation.toLocaleLowerCase())
-      : g.slice());
-  saveVariations(groups.filter(g => g.length > 1));
+function removeVariation(editorEl, coreStart, core, variation) {
+  const a = anchorFor(editorEl, coreStart, core);
+  if (!a) return;
+  a.group = a.group.filter(m => !sameWord(m, variation) || sameWord(m, core));
+  if (a.group.length < 2) editorEl._anchors = anchorsOf(editorEl).filter(x => x !== a);
 }
+
+// Variations used to be shared by spelling across all notes; that store
+// is no longer used
+try { localStorage.removeItem('stream_variations'); } catch {}
 
 // Give a variation the case of the word it replaces: "Big" -> "Large",
 // "BIG" -> "LARGE"
@@ -370,6 +408,62 @@ let varTarget = null;
 
 // Hover highlights a word; a click opens its variations. Option/Alt-click
 // places the caret as usual instead.
+// --- Variations preview ---
+// Hovering a word's dots (tapping them on a touch screen) shows its
+// variations in a small card under the dots, without opening the panel.
+const varPreview = document.getElementById('varPreview');
+let previewDots = null;
+
+// The dots under a point on screen (with a few pixels of slack, they're
+// small), as { index, token, dots }, or null
+function dotsAtPoint(editorEl, overlayEl, x, y) {
+  for (const dots of overlayEl.querySelectorAll('.dots')) {
+    const r = dots.getBoundingClientRect();
+    if (x >= r.left - 6 && x <= r.right + 6 && y >= r.top - 5 && y <= r.bottom + 7) {
+      const index = Number(dots.closest('.w').dataset.i);
+      const token = editorEl._tokens && editorEl._tokens[index];
+      if (token && token.word) return { index, token, dots, editorEl };
+    }
+  }
+  return null;
+}
+
+function showPreview(hit) {
+  if (previewDots === hit.dots && !varPreview.hidden) return;
+  hidePreview();
+  const t = hit.token;
+  const list = variationsFor(hit.editorEl, t.start + t.lead.length, t.core).map(v => matchCase(t.core, v));
+  if (!list.length) return;
+  varPreview.innerHTML = `<span class="var-preview-label">Variations</span><ul>${list.map(v => `<li>${escapeHtml(v)}</li>`).join('')}</ul>`;
+  varPreview.hidden = false;
+  hit.dots.classList.add('active');
+  previewDots = hit.dots;
+  // Centered under the dots, kept inside the window; above them if there's
+  // no room below
+  const d = hit.dots.getBoundingClientRect();
+  const card = varPreview.getBoundingClientRect();
+  const left = Math.min(Math.max(12, d.left + d.width / 2 - card.width / 2), window.innerWidth - card.width - 12);
+  const below = d.bottom + 8;
+  const top = below + card.height > window.innerHeight - 12 ? d.top - 8 - card.height : below;
+  varPreview.style.left = `${Math.round(left)}px`;
+  varPreview.style.top = `${Math.round(top)}px`;
+}
+
+function hidePreview() {
+  if (previewDots) previewDots.classList.remove('active');
+  previewDots = null;
+  varPreview.hidden = true;
+}
+
+// Touch and pen taps show the preview; a mouse click opens the panel
+let lastPointerType = 'mouse';
+document.addEventListener('pointerdown', (e) => {
+  lastPointerType = e.pointerType || 'mouse';
+  if (!varPreview.hidden) hidePreview();
+}, true);
+document.addEventListener('scroll', hidePreview, true);
+window.addEventListener('resize', hidePreview);
+
 function setupWordVariations(editorEl, overlayEl, refresh) {
   const setHover = (i) => {
     if (editorEl._hover === i) return;
@@ -388,17 +482,39 @@ function setupWordVariations(editorEl, overlayEl, refresh) {
     if (frame) return;
     frame = requestAnimationFrame(() => {
       frame = 0;
-      if (e.altKey || !varLayer.hidden || hasSelectionIn(editorEl) || e.buttons) { setHover(null); return; }
+      if (e.altKey || !varLayer.hidden || hasSelectionIn(editorEl) || e.buttons) {
+        setHover(null);
+        hidePreview();
+        editorEl.classList.remove('over-dots');
+        return;
+      }
+      const dots = dotsAtPoint(editorEl, overlayEl, e.clientX, e.clientY);
+      editorEl.classList.toggle('over-dots', !!dots);
+      if (dots) {
+        setHover(dots.index);
+        showPreview(dots);
+        return;
+      }
+      hidePreview();
       const hit = wordAtPoint(editorEl, e.clientX, e.clientY);
       setHover(hit ? hit.index : null);
     });
   });
-  editorEl.addEventListener('mouseleave', () => setHover(null));
-  editorEl.addEventListener('keydown', () => setHover(null));
+  editorEl.addEventListener('mouseleave', () => {
+    setHover(null);
+    hidePreview();
+    editorEl.classList.remove('over-dots');
+  });
+  editorEl.addEventListener('keydown', () => { setHover(null); hidePreview(); });
 
   editorEl.addEventListener('click', (e) => {
     if (e.altKey || hasSelectionIn(editorEl)) return;
-    const hit = wordAtPoint(editorEl, e.clientX, e.clientY);
+    const dots = dotsAtPoint(editorEl, overlayEl, e.clientX, e.clientY);
+    if (dots && lastPointerType !== 'mouse') {
+      showPreview(dots);
+      return;
+    }
+    const hit = dots || wordAtPoint(editorEl, e.clientX, e.clientY);
     if (!hit) return;
     setHover(null);
     openVariations(editorEl, refresh, hit.token);
@@ -406,8 +522,8 @@ function setupWordVariations(editorEl, overlayEl, refresh) {
 }
 
 function renderVariations() {
-  const { core } = varTarget;
-  const list = variationsOf(core);
+  const { editorEl, start, lead, core } = varTarget;
+  const list = variationsFor(editorEl, start + lead.length, core);
   varWord.textContent = core;
   varCount.textContent = list.length === 0 ? 'No variations yet'
     : list.length === 1 ? '1 variation' : `${list.length} variations`;
@@ -420,6 +536,7 @@ function renderVariations() {
 }
 
 function openVariations(editorEl, refresh, token) {
+  hidePreview();
   varTarget = { editorEl, refresh, start: token.start, lead: token.lead, core: token.core };
   renderVariations();
   varInput.value = '';
@@ -485,7 +602,8 @@ function useVariation(variation) {
 varList.addEventListener('click', (e) => {
   const remove = e.target.closest('.var-remove');
   if (remove) {
-    removeVariation(varTarget.core, remove.dataset.v);
+    const t = varTarget;
+    removeVariation(t.editorEl, t.start + t.lead.length, t.core, remove.dataset.v);
     renderVariations();
     varTarget.refresh(false);
     varInput.focus({ preventScroll: true });
@@ -498,7 +616,8 @@ varList.addEventListener('click', (e) => {
 varForm.addEventListener('submit', (e) => {
   e.preventDefault();
   if (!varTarget) return;
-  addVariation(varTarget.core, varInput.value);
+  const t = varTarget;
+  addVariation(t.editorEl, t.start + t.lead.length, t.core, varInput.value);
   varInput.value = '';
   renderVariations();
   varTarget.refresh(false);
@@ -605,7 +724,8 @@ function formatDate(iso) {
 
 // --- Save note (main editor, creates new) ---
 function saveNote() {
-  const text = getPlainTextFrom(editor);
+  updateMainBlur(); // bring the word variations up to date with the text
+  const text = getEditorText(editor);
   if (!text.trim()) return;
 
   const now = new Date();
@@ -613,6 +733,7 @@ function saveNote() {
     id: Date.now().toString(),
     title: formatDate(now.toISOString()),
     text: text,
+    variations: serializeAnchors(editor),
     created: now.toISOString()
   };
 
@@ -622,6 +743,7 @@ function saveNote() {
 
   editor.innerHTML = '';
   blurOverlay.innerHTML = '';
+  setAnchors(editor, [], '');
   wordCountEl.textContent = '0 words';
 
   saveBtn.textContent = 'Saved';
@@ -638,11 +760,13 @@ function saveNote() {
 // --- Save view note (updates existing) ---
 function saveViewNote() {
   if (!currentViewId) return;
-  const text = getPlainTextFrom(viewEditor);
+  updateViewBlur(); // bring the word variations up to date with the text
+  const text = getEditorText(viewEditor);
   const notes = getNotes();
   const idx = notes.findIndex(n => n.id === currentViewId);
   if (idx === -1) return;
   notes[idx].text = text;
+  notes[idx].variations = serializeAnchors(viewEditor);
   setNotes(notes);
 }
 
@@ -650,6 +774,7 @@ function saveViewNote() {
 function newNote() {
   editor.innerHTML = '';
   blurOverlay.innerHTML = '';
+  setAnchors(editor, [], '');
   wordCountEl.textContent = '0 words';
   editor.focus();
   updateMainCursor();
@@ -729,6 +854,7 @@ function openNote(note) {
   currentViewId = note.id;
   viewTitle.textContent = note.title;
   viewEditor.textContent = note.text;
+  setAnchors(viewEditor, note.variations, getEditorText(viewEditor));
   showScreen(viewScreen);
   viewEditor.focus();
   // Place cursor at end
@@ -799,6 +925,23 @@ function exportNote(note, triggerEl) {
 // --- Button handlers ---
 saveBtn.addEventListener('click', saveNote);
 newBtn.addEventListener('click', newNote);
+
+// --- Focus mode (blur on/off), remembered between visits ---
+const focusSwitches = document.querySelectorAll('[data-focus-switch]');
+
+function setFocusMode(on) {
+  document.body.classList.toggle('no-focus', !on);
+  focusSwitches.forEach(sw => sw.setAttribute('aria-checked', String(on)));
+  try { localStorage.setItem('stream_focus', on ? 'on' : 'off'); } catch {}
+}
+
+focusSwitches.forEach(sw => sw.addEventListener('click', () => {
+  setFocusMode(sw.getAttribute('aria-checked') !== 'true');
+}));
+
+let savedFocus = 'on';
+try { savedFocus = localStorage.getItem('stream_focus') || 'on'; } catch {}
+setFocusMode(savedFocus !== 'off');
 
 // --- Init ---
 updateNotesCount();
