@@ -59,14 +59,6 @@ body {
   gap: 12px;
 }
 
-.app-name {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 20px;
-  font-weight: 500;
-  letter-spacing: -0.4px;
-  color: #1d1d1f;
-}
-
 .topbar-btn {
   font-family: var(--font-main);
   font-size: 12px;
@@ -328,7 +320,8 @@ body {
   text-align: center;
 }
 
-/* Bottom toolbar */
+/* Bottom toolbar: New / Save / Notes centered, the word count on the
+   right edge of the writing column, on the same line */
 .bottom-toolbar {
   position: fixed;
   bottom: 0;
@@ -338,18 +331,56 @@ body {
   justify-content: center;
   padding: 24px 0;
   z-index: 6;
+}
+
+.bottom-toolbar-inner {
+  position: relative;
+  width: 100%;
+  max-width: 680px;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The buttons stay hidden until the pointer is over the page, then faint,
+   then fully visible when it's over the toolbar */
+.toolbar-buttons {
+  display: flex;
   gap: 10px;
   opacity: 0;
   transition: opacity 0.5s ease;
 }
-.bottom-toolbar:hover {
-  opacity: 1;
-}
-.screen.active:hover .bottom-toolbar {
+.screen.active:hover .toolbar-buttons {
   opacity: 0.35;
 }
-.bottom-toolbar:hover {
-  opacity: 1 !important;
+.bottom-toolbar:hover .toolbar-buttons {
+  opacity: 1;
+}
+
+/* The word count stays faint, like the top bar it came from, and becomes
+   clear when the pointer is over the toolbar */
+.bottom-toolbar .word-count {
+  position: absolute;
+  right: 32px;
+  top: 50%;
+  translate: 0 -50%;
+  opacity: 0.35;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+}
+.bottom-toolbar:hover .word-count {
+  opacity: 1;
+}
+
+/* Small phones: the buttons move to the left so they don't run into the
+   word count on the right */
+@media (max-width: 440px) {
+  .bottom-toolbar-inner {
+    justify-content: flex-start;
+    padding: 0 20px;
+  }
+  .bottom-toolbar .word-count { right: 20px; }
 }
 
 /* View mode (reading a saved note) */
