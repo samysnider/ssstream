@@ -46,7 +46,7 @@ function walkText(root, visit) {
   const walk = (el) => {
     for (const n of el.childNodes) {
       if (n.nodeType === Node.TEXT_NODE) visit('text', n);
-      else if (n.nodeName === 'BR') visit('br', n);
+      else if (n.nodeName === 'BR') { if (!n.hasAttribute('data-ph') && hasTextAfter(n, root)) visit('br', n); }
       else if (n.nodeType === Node.ELEMENT_NODE) {
         if (/^(DIV|P)$/.test(n.nodeName) && n.previousSibling) visit('block', n);
         walk(n);
@@ -54,6 +54,17 @@ function walkText(root, visit) {
     }
   };
   walk(root);
+}
+
+// Whether any text follows a node inside root. A <br> with nothing after
+// it is the browser's placeholder for an empty last line, not a line break.
+function hasTextAfter(node, root) {
+  for (let n = node; n && n !== root; n = n.parentNode) {
+    for (let s = n.nextSibling; s; s = s.nextSibling) {
+      if (s.textContent.length > 0) return true;
+    }
+  }
+  return false;
 }
 
 function getEditorText(root) {
@@ -137,6 +148,156 @@ function tokenize(text) {
   return tokens;
 }
 
+// --- Markdown ---
+// The text stays plain Markdown: it's only styled as you write. The
+// editor (invisible, it holds the caret) and the overlay (what you see)
+// get exactly the same styling, so their letters line up. Markers (#,
+// **, >, ...) stay visible in light grey, so they can be edited normally.
+const MD_BOLD = 1, MD_ITALIC = 2, MD_CODE = 4, MD_STRIKE = 8, MD_MARK = 16, MD_URL = 32, MD_LINK = 64;
+const MD_CLASSES = [[MD_BOLD, 'md-b'], [MD_ITALIC, 'md-i'], [MD_CODE, 'md-code'], [MD_STRIKE, 'md-s'],
+  [MD_MARK, 'md-mark'], [MD_URL, 'md-url'], [MD_LINK, 'md-link']];
+
+// One entry per line: { start, text, cls, flags }, where cls styles the
+// whole line (md-h1 ... md-h6, md-quote, md-li, md-hr, md-codeblock) and
+// flags holds each character's inline styles
+function parseMarkdown(text) {
+  let offset = 0;
+  let inFence = false;
+  return text.split('\n').map(line => {
+    const start = offset;
+    offset += line.length + 1;
+    const flags = new Uint8Array(line.length);
+    const mark = (a, b) => { for (let i = a; i < b; i++) flags[i] |= MD_MARK; };
+    if (/^\s*(```|~~~)/.test(line)) {
+      inFence = !inFence;
+      mark(0, line.length);
+      return { start, text: line, cls: 'md-codeblock', flags };
+    }
+    if (inFence) return { start, text: line, cls: 'md-codeblock', flags };
+    let cls = '';
+    let body = 0;
+    let m;
+    if ((m = line.match(/^(#{1,6})(\s+|$)/))) {
+      cls = 'md-h' + m[1].length;
+      mark(0, m[0].length);
+      body = m[0].length;
+    } else if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) {
+      mark(0, line.length);
+      return { start, text: line, cls: 'md-hr', flags };
+    } else if ((m = line.match(/^\s*>\s?/))) {
+      cls = 'md-quote';
+      mark(0, m[0].length);
+      body = m[0].length;
+    } else if ((m = line.match(/^(\s*)([-*+]|\d+[.)])(\s+)/))) {
+      cls = 'md-li';
+      mark(m[1].length, m[1].length + m[2].length);
+      body = m[0].length;
+    }
+    parseInline(line, body, flags);
+    return { start, text: line, cls, flags };
+  });
+}
+
+function parseInline(s, from, flags) {
+  const set = (a, b, f) => { for (let i = a; i < b; i++) flags[i] |= f; };
+  const taken = (a, b) => { for (let i = a; i < b; i++) if (flags[i] & (MD_CODE | MD_MARK | MD_URL)) return true; return false; };
+  // fn returns false to turn a match down; the search then resumes one
+  // character later, so a marker used elsewhere doesn't hide the next one
+  const each = (re, fn) => {
+    re.lastIndex = from;
+    let m;
+    while ((m = re.exec(s))) {
+      if (fn(m, m.index, m.index + m[0].length) === false) re.lastIndex = m.index + 1;
+    }
+  };
+  // `code`: nothing inside it is formatting
+  each(/`([^`]+)`/g, (m, a, b) => { set(a, a + 1, MD_MARK); set(b - 1, b, MD_MARK); set(a + 1, b - 1, MD_CODE); });
+  // [link](url)
+  each(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, a, b) => {
+    if (taken(a, b)) return false;
+    const textEnd = a + 1 + m[1].length;
+    set(a, a + 1, MD_MARK);
+    set(a + 1, textEnd, MD_LINK);
+    set(textEnd, textEnd + 2, MD_MARK);
+    set(textEnd + 2, b - 1, MD_URL | MD_MARK);
+    set(b - 1, b, MD_MARK);
+  });
+  const pair = (re, len, style, wordBound) => each(re, (m, a, b) => {
+    if (taken(a, a + len) || taken(b - len, b)) return false;
+    if (wordBound && ((a > 0 && /[\p{L}\p{N}]/u.test(s[a - 1])) || (b < s.length && /[\p{L}\p{N}]/u.test(s[b])))) return false;
+    set(a, a + len, MD_MARK);
+    set(b - len, b, MD_MARK);
+    set(a + len, b - len, style);
+  });
+  pair(/\*\*\*(?=\S)(.+?)\*\*\*/g, 3, MD_BOLD | MD_ITALIC, false);
+  pair(/\*\*(?=\S)(.+?)\*\*/g, 2, MD_BOLD, false);
+  pair(/__(?=\S)(.+?)__/g, 2, MD_BOLD, true);
+  pair(/~~(?=\S)(.+?)~~/g, 2, MD_STRIKE, false);
+  pair(/\*(?=[^\s*])(.+?)\*/g, 1, MD_ITALIC, false);
+  pair(/_(?=[^\s_])(.+?)_/g, 1, MD_ITALIC, true);
+}
+
+function escapeText(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// HTML for part of a line [a, b), as runs of characters sharing a style
+function mdRuns(line, a, b) {
+  let html = '';
+  let i = a;
+  while (i < b) {
+    const f = line.flags[i];
+    let j = i + 1;
+    while (j < b && line.flags[j] === f) j++;
+    const text = escapeText(line.text.slice(i, j));
+    const cls = MD_CLASSES.filter(([bit]) => f & bit).map(([, c]) => c).join(' ');
+    html += cls ? `<span class="${cls}">${text}</span>` : text;
+    i = j;
+  }
+  return html;
+}
+
+// The editor's own markup: one span per line, separated by real "\n"
+// characters (plus a placeholder <br> so a final empty line shows)
+function editorMarkup(lines, text) {
+  const html = lines.map(l => `<span class="md-line ${l.cls}">${mdRuns(l, 0, l.text.length)}</span>`).join('\n');
+  return text.endsWith('\n') ? html + '<br data-ph="">' : html;
+}
+
+// Restyle the editor when its structure no longer matches the text (a
+// heading started, a bold word closed...), keeping the selection. Never
+// while an input method is composing a character.
+const markupTemplate = document.createElement('template');
+function syncEditorMarkup(editorEl, text, lines) {
+  if (editorEl._composing) return;
+  const html = editorMarkup(lines, text);
+  markupTemplate.innerHTML = html;
+  if (markupTemplate.innerHTML === editorEl.innerHTML) return;
+  const sel = window.getSelection();
+  const hasSel = sel.rangeCount > 0 && editorEl.contains(sel.anchorNode);
+  const anchor = hasSel ? offsetOf(editorEl, sel.anchorNode, sel.anchorOffset) : -1;
+  const focus = hasSel ? offsetOf(editorEl, sel.focusNode, sel.focusOffset) : -1;
+  editorEl.innerHTML = html;
+  if (hasSel) {
+    const a = positionAt(editorEl, anchor);
+    const f = positionAt(editorEl, focus);
+    sel.setBaseAndExtent(a.node, a.offset, f.node, f.offset);
+  }
+}
+
+// Markdown without its markers, for previews (the notes list)
+function stripMarkdown(text) {
+  return text
+    .replace(/^\s*(```|~~~).*$/gm, '')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/^\s*>\s?/gm, '')
+    .replace(/^(\s*)([-*+]|\d+[.)])\s+/gm, '$1')
+    .replace(/^\s*([-*_])(\s*\1){2,}\s*$/gm, '')
+    .replace(/\[([^\]]+)\]\([^)\s]+\)/g, '$1')
+    .replace(/(\*\*|__|~~|`)(?=\S)(.+?)\1/g, '$2')
+    .replace(/(\*|_)(?=[^\s*_])(.+?)\1/g, '$2');
+}
+
 function updateBlurFor(editorEl, overlayEl, wordCountEl) {
   const text = getEditorText(editorEl);
 
@@ -151,41 +312,70 @@ function updateBlurFor(editorEl, overlayEl, wordCountEl) {
   }
 
   const caretPos = getCaretCharOffsetIn(editorEl);
-  const tokens = tokenize(text);
+  const lines = parseMarkdown(text);
+  syncEditorMarkup(editorEl, text, lines);
+
+  // Words, line by line (offsets in the whole text)
+  const tokens = [];
+  const lineTokens = lines.map(l => tokenize(l.text).map(t => {
+    const g = { ...t, start: t.start + l.start, end: t.end + l.start, rel: t.start };
+    tokens.push(g);
+    return g;
+  }));
   editorEl._tokens = tokens;
 
   // Keep each word's variations attached to it through the edit, and let
-  // go of any whose word was changed (e.g. a letter typed onto it)
+  // go of any whose word was changed (e.g. a letter typed onto it). After
+  // an undo, bring back the variations of words the undo restored.
   trackAnchors(editorEl, text, caretPos);
+  if (editorEl._restoreAnchors) {
+    const current = anchorsOf(editorEl);
+    editorEl._restoreAnchors.forEach(r => {
+      const overlaps = current.some(a => a.start < r.end && r.start < a.end);
+      if (!overlaps && r.group.some(m => sameWord(m, text.slice(r.start, r.end)))) {
+        current.push({ start: r.start, end: r.end, group: r.group.slice() });
+      }
+    });
+    editorEl._restoreAnchors = null;
+  }
   const wordAt = new Map(tokens.filter(t => t.word).map(t => [t.start + t.lead.length, t]));
   editorEl._anchors = anchorsOf(editorEl).filter(a => {
     const t = wordAt.get(a.start);
     return t && a.end === a.start + t.core.length;
   });
 
-  const count = tokens.filter(t => !/\s/.test(t.text[0])).length;
+  const count = tokens.filter(t => t.word).length;
   if (wordCountEl) wordCountEl.textContent = count === 1 ? '1 word' : `${count} words`;
 
   // The word under the caret stays sharp, every other one goes soft. Each
   // word is its own span, so it can be highlighted on hover and carry
   // dots for its variations (the dots sit outside the blurred text, so
-  // they stay sharp).
-  let html = '';
-  tokens.forEach((t, i) => {
-    if (/\s/.test(t.text[0])) { html += escapeHtml(t.text); return; }
-    const isCurrent = caretPos >= t.start && caretPos <= t.end;
-    const n = t.word ? Math.min(variationsFor(editorEl, t.start + t.lead.length, t.core).length, 5) : 0;
-    const cls = ['w', isCurrent ? 'clear' : 'blurred'];
-    if (i === editorEl._hover) cls.push('hover');
-    let inner = `<span class="t">${escapeHtml(t.text)}</span>`;
-    if (n) {
-      // Dots centered under the word itself, not its punctuation
-      const part = (str) => str ? `<span class="t">${escapeHtml(str)}</span>` : '';
-      inner = `${part(t.lead)}<span class="c"><span class="t">${escapeHtml(t.core)}</span><span class="dots">${'<i></i>'.repeat(n)}</span></span>${part(t.trail)}`;
-    }
-    html += `<span class="${cls.join(' ')}" data-i="${i}">${inner}</span>`;
-  });
-  overlayEl.innerHTML = html;
+  // they stay sharp). Lines carry their Markdown styling, like the editor.
+  let index = 0;
+  const html = lines.map((l, li) => {
+    let inner = '';
+    lineTokens[li].forEach(t => {
+      const i = index++;
+      const a = t.rel;
+      const b = t.rel + t.text.length;
+      if (/\s/.test(t.text[0])) { inner += mdRuns(l, a, b); return; }
+      const isCurrent = caretPos >= t.start && caretPos <= t.end;
+      const n = t.word ? Math.min(variationsFor(editorEl, t.start + t.lead.length, t.core).length, 5) : 0;
+      const cls = ['w', isCurrent ? 'clear' : 'blurred'];
+      if (i === editorEl._hover) cls.push('hover');
+      let word = `<span class="t">${mdRuns(l, a, b)}</span>`;
+      if (n) {
+        // Dots centered under the word itself, not its punctuation
+        const coreA = a + t.lead.length;
+        const coreB = coreA + t.core.length;
+        const part = (x, y) => x < y ? `<span class="t">${mdRuns(l, x, y)}</span>` : '';
+        word = `${part(a, coreA)}<span class="c"><span class="t">${mdRuns(l, coreA, coreB)}</span><span class="dots">${'<i></i>'.repeat(n)}</span></span>${part(coreB, b)}`;
+      }
+      inner += `<span class="${cls.join(' ')}" data-i="${i}">${word}</span>`;
+    });
+    return `<span class="md-line ${l.cls}">${inner}</span>`;
+  }).join('\n');
+  overlayEl.innerHTML = text.endsWith('\n') ? html + '<br>' : html;
 }
 
 function updateCursorFor(editorEl, wrapperEl, cursorEl) {
@@ -219,9 +409,13 @@ function updateCursorFor(editorEl, wrapperEl, cursorEl) {
     return;
   }
 
+  // 40px on body text, taller on headings (the caret's box grows with
+  // the text size)
+  const height = Math.max(40, Math.round(rect.height * 1.38));
+  cursorEl.style.height = height + 'px';
   const wrapperRect = wrapperEl.getBoundingClientRect();
   cursorEl.style.left = (rect.left - wrapperRect.left) + 'px';
-  cursorEl.style.top = (rect.top - wrapperRect.top + (rect.height - 40) / 2) + 'px';
+  cursorEl.style.top = (rect.top - wrapperRect.top + (rect.height - height) / 2) + 'px';
   cursorEl.style.opacity = '';
   cursorEl.style.animation = 'none';
   cursorEl.offsetHeight;
@@ -641,6 +835,93 @@ editor.addEventListener('keyup', () => { updateMainBlur(); updateMainCursor(); }
 editor.addEventListener('click', () => { updateMainBlur(); updateMainCursor(); });
 editor.addEventListener('focus', () => { updateMainBlur(); updateMainCursor(); });
 
+// --- Undo / redo ---
+// Restyling the editor as you type (Markdown) replaces its contents, which
+// the browser's own undo can't follow, so Stream keeps its own history:
+// snapshots of the text, the caret and the words' variations. Typing is
+// grouped into one step per word.
+function snapshotOf(editorEl) {
+  return {
+    text: editorEl._text ?? getEditorText(editorEl),
+    caret: Math.max(0, editorEl._caret ?? 0),
+    anchors: serializeAnchors(editorEl),
+    time: Date.now(),
+  };
+}
+
+function resetHistory(editorEl) {
+  editorEl._history = { stack: [snapshotOf(editorEl)], index: 0 };
+}
+
+function recordHistory(editorEl, type, data) {
+  const h = editorEl._history;
+  if (!h || editorEl._composing) return;
+  const snap = snapshotOf(editorEl);
+  snap.type = type;
+  const top = h.stack[h.index];
+  if (top && top.text === snap.text) {
+    top.caret = snap.caret;
+    top.anchors = snap.anchors;
+    return;
+  }
+  // Consecutive typing (within a word) or consecutive deleting is one step
+  // (one character at a time, right where the last one went)
+  const step = snap.caret - (top ? top.caret : 0);
+  const typingWord = type === 'insertText' && data && data.length === 1 && !/\s/.test(data) && step === 1;
+  const deleting = (type === 'deleteContentBackward' && step === -1) || (type === 'deleteContentForward' && step === 0);
+  if ((typingWord || deleting) && top && top.type === type && h.index > 0
+      && h.index === h.stack.length - 1 && snap.time - top.time < 1500) {
+    h.stack[h.index] = snap; // still the same word: extend this step
+    return;
+  }
+  h.stack.splice(h.index + 1);
+  h.stack.push(snap);
+  if (h.stack.length > 300) h.stack.shift();
+  h.index = h.stack.length - 1;
+}
+
+function stepHistory(editorEl, dir, refresh) {
+  const h = editorEl._history;
+  if (!h) return;
+  const i = h.index + dir;
+  if (i < 0 || i >= h.stack.length) return;
+  h.index = i;
+  const snap = h.stack[i];
+  editorEl.textContent = snap.text;
+  editorEl._restoreAnchors = snap.anchors;
+  editorEl.focus({ preventScroll: true });
+  const p = positionAt(editorEl, Math.min(snap.caret, snap.text.length));
+  window.getSelection().collapse(p.node, p.offset);
+  refresh();
+}
+
+function setupHistory(editorEl, refresh) {
+  resetHistory(editorEl);
+  editorEl.addEventListener('input', (e) => recordHistory(editorEl, e.inputType, e.data));
+  editorEl.addEventListener('beforeinput', (e) => {
+    if (e.inputType === 'historyUndo' || e.inputType === 'historyRedo') {
+      e.preventDefault();
+      stepHistory(editorEl, e.inputType === 'historyUndo' ? -1 : 1, refresh);
+    }
+  });
+  editorEl.addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase();
+    if ((e.metaKey || e.ctrlKey) && k === 'z') {
+      e.preventDefault();
+      stepHistory(editorEl, e.shiftKey ? 1 : -1, refresh);
+    } else if (e.ctrlKey && !e.metaKey && k === 'y') {
+      e.preventDefault();
+      stepHistory(editorEl, 1, refresh);
+    }
+  });
+  editorEl.addEventListener('compositionstart', () => { editorEl._composing = true; });
+  editorEl.addEventListener('compositionend', () => {
+    editorEl._composing = false;
+    refresh();
+    recordHistory(editorEl, 'insertCompositionText');
+  });
+}
+
 function setupKeydown(editorEl, saveFn) {
   editorEl.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && ['b','i','u'].includes(e.key.toLowerCase())) {
@@ -650,25 +931,40 @@ function setupKeydown(editorEl, saveFn) {
       e.preventDefault();
       saveFn();
     }
-    if (e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+    if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey && !e.isComposing) {
       e.preventDefault();
-      document.execCommand('insertLineBreak');
-      requestAnimationFrame(() => {
-        if (editorEl === editor) { updateMainBlur(); updateMainCursor(); }
-        else { updateViewBlur(); updateViewCursor(); }
-      });
+      insertPlainText(editorEl, '\n', 'insertLineBreak');
     }
   });
 
   editorEl.addEventListener('paste', (e) => {
     e.preventDefault();
-    const text = e.clipboardData.getData('text/plain');
-    document.execCommand('insertText', false, text);
+    const text = e.clipboardData.getData('text/plain').replace(/\r\n?/g, '\n');
+    insertPlainText(editorEl, text, 'insertFromPaste');
   });
+}
+
+// Insert text at the selection by editing the text itself, then restyle.
+// Browsers add stray, invisible line breaks when inserting newlines into
+// styled text; doing it directly keeps the text exactly as typed. Undo is
+// Stream's own (see above), so this stays undoable.
+function insertPlainText(editorEl, str, inputType) {
+  const sel = window.getSelection();
+  if (!sel.rangeCount || !editorEl.contains(sel.anchorNode)) return;
+  const a = offsetOf(editorEl, sel.anchorNode, sel.anchorOffset);
+  const f = offsetOf(editorEl, sel.focusNode, sel.focusOffset);
+  const start = Math.min(a, f);
+  const end = Math.max(a, f);
+  const text = getEditorText(editorEl);
+  editorEl.textContent = text.slice(0, start) + str + text.slice(end);
+  const p = positionAt(editorEl, start + str.length);
+  sel.collapse(p.node, p.offset);
+  editorEl.dispatchEvent(new InputEvent('input', { inputType, data: str, bubbles: true }));
 }
 
 setupKeydown(editor, saveNote);
 setupWordVariations(editor, blurOverlay, (withCursor = true) => { updateMainBlur(); if (withCursor) updateMainCursor(); });
+setupHistory(editor, () => { updateMainBlur(); updateMainCursor(); });
 
 document.addEventListener('click', (e) => {
   if (!varLayer.hidden) return;
@@ -693,6 +989,7 @@ viewEditor.addEventListener('focus', () => { updateViewBlur(); updateViewCursor(
 
 setupKeydown(viewEditor, saveViewNote);
 setupWordVariations(viewEditor, viewBlurOverlay, (withCursor = true) => { updateViewBlur(); if (withCursor) updateViewCursor(); });
+setupHistory(viewEditor, () => { updateViewBlur(); updateViewCursor(); });
 
 // --- localStorage Notes ---
 function getNotes() {
@@ -744,6 +1041,7 @@ function saveNote() {
   editor.innerHTML = '';
   blurOverlay.innerHTML = '';
   setAnchors(editor, [], '');
+  resetHistory(editor);
   wordCountEl.textContent = '0 words';
 
   saveBtn.textContent = 'Saved';
@@ -775,6 +1073,7 @@ function newNote() {
   editor.innerHTML = '';
   blurOverlay.innerHTML = '';
   setAnchors(editor, [], '');
+  resetHistory(editor);
   wordCountEl.textContent = '0 words';
   editor.focus();
   updateMainCursor();
@@ -804,7 +1103,7 @@ function renderArchives() {
   }
 
   archivesList.innerHTML = notes.map(note => {
-    const preview = note.text.trim().substring(0, 80).replace(/\n/g, ' ');
+    const preview = stripMarkdown(note.text).trim().replace(/\s*\n\s*/g, ' ').substring(0, 80);
     return `
       <li class="archive-item" data-id="${note.id}">
         <div class="archive-item-left">
@@ -866,6 +1165,7 @@ function openNote(note) {
   sel.addRange(range);
   updateViewBlur();
   updateViewCursor();
+  resetHistory(viewEditor);
 }
 
 // --- Back from view to notes list (auto-saves changes) ---

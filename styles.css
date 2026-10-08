@@ -354,6 +354,30 @@ body.no-focus .blur-overlay .w.blurred .t {
   position: relative;
 }
 
+/* ---- Markdown ----
+   Sizes and weights apply to both the editor and the overlay, so their
+   letters line up; colors and backgrounds only to the overlay (the editor
+   is invisible). Markers stay visible in light grey. */
+.md-h1 { font-size: 1.6em; font-weight: 700; line-height: 1.4; letter-spacing: -0.02em; }
+.md-h2 { font-size: 1.35em; font-weight: 700; line-height: 1.45; letter-spacing: -0.015em; }
+.md-h3 { font-size: 1.15em; font-weight: 650; line-height: 1.55; }
+.md-h4, .md-h5, .md-h6 { font-weight: 650; }
+.md-quote { font-style: italic; }
+.md-b { font-weight: 700; }
+.md-i { font-style: italic; }
+.md-code,
+.md-codeblock {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.82em;
+}
+.md-codeblock .md-code { font-size: 1em; }
+
+.blur-overlay .md-mark { color: #c7c7cc; }
+.blur-overlay .md-quote { color: #6e6e73; }
+.blur-overlay .md-s { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.blur-overlay .md-link { text-decoration: underline; text-decoration-color: #c7c7cc; text-underline-offset: 3px; }
+.blur-overlay .md-code { background: #f2f2f4; border-radius: 4px; }
+
 /* Custom cursor */
 .custom-cursor {
   position: absolute;
