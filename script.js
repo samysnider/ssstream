@@ -1394,27 +1394,3 @@ updateMainBlur = function() {
 
 // Show on load if editor is empty
 checkPlaceholderVisibility();
-
-// --- Generate apple-touch-icon ---
-(function() {
-  const c = document.createElement('canvas');
-  c.width = 180; c.height = 180;
-  const ctx = c.getContext('2d');
-  // White background
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, 180, 180);
-  // Draw S curve
-  ctx.beginPath();
-  ctx.moveTo(56, 68);
-  ctx.bezierCurveTo(56, 50, 72, 42, 90, 42);
-  ctx.bezierCurveTo(108, 42, 124, 50, 124, 68);
-  ctx.bezierCurveTo(124, 86, 108, 88, 90, 92);
-  ctx.bezierCurveTo(72, 96, 56, 98, 56, 116);
-  ctx.bezierCurveTo(56, 134, 72, 140, 90, 140);
-  ctx.bezierCurveTo(108, 140, 124, 132, 124, 116);
-  ctx.strokeStyle = '#1d1d1f';
-  ctx.lineWidth = 7;
-  ctx.lineCap = 'round';
-  ctx.stroke();
-  document.getElementById('touchIcon').href = c.toDataURL('image/png');
-})();

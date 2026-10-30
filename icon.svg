@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+<!-- Stream: "S" from iA Writer Quattro Bold Italic (SIL Open Font License, fonts/LICENSE.md) on a blue gradient -->
+<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4DA8FF"/><stop offset="1" stop-color="#0B5FE0"/></linearGradient></defs>
+<rect width="1000" height="1000" rx="225" fill="url(#g)"/>
+<path fill="#FFFFFF" transform="translate(500 500) scale(0.776 -0.776) translate(-303 -349)" d="M12 95 105 189Q135 151 181.5 130.5Q228 110 277 110Q333 110 363.0 137.0Q393 164 393 213Q393 247 374.0 264.0Q355 281 312 291L243 307Q170 324 134.0 369.5Q98 415 98 482Q98 551 130.5 602.5Q163 654 224.0 682.0Q285 710 367 710Q442 710 503.0 684.0Q564 658 594 612L497 523Q474 555 439.0 572.5Q404 590 360 590Q306 590 278.5 565.5Q251 541 251 498Q251 468 269.5 452.0Q288 436 335 424L401 407Q475 388 511.0 344.5Q547 301 547 230Q547 158 514.0 103.5Q481 49 418.0 18.5Q355 -12 268 -12Q181 -12 112.0 16.5Q43 45 12 95Z"/>
+</svg>

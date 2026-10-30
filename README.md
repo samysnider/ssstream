@@ -4,6 +4,10 @@ A minimal writing app — plain HTML, CSS and JS (`index.html`, `styles.css`, `s
 
 Live: https://ssstream.vercel.app/
 
+## Icon
+
+The app icon (`icon.svg` for the browser tab, `apple-touch-icon.png` for the iPhone home screen) is an "S" in iA Writer Quattro Bold Italic on a blue gradient. On iPhone, an icon already on the home screen keeps its old image: remove it and add Stream again from Safari's Share menu.
+
 ## Typeface
 
 Everything is set in [iA Writer Quattro](https://github.com/iaolo/iA-Fonts) by iA (Information Architects), based on IBM Plex. It's bundled in `fonts/` under the SIL Open Font License (`fonts/LICENSE.md`), so the app loads no fonts from elsewhere.
