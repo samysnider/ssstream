@@ -6,7 +6,7 @@ Live: https://ssstream.vercel.app/
 
 ## Icon
 
-The app icon (`icon.svg` for the browser tab, `apple-touch-icon.png` for the iPhone home screen) is an "S" in iA Writer Quattro Regular on a blue gradient. On iPhone, an icon already on the home screen keeps its old image: remove it and add Stream again from Safari's Share menu.
+The app icon (`icon.svg` for the browser tab, `apple-touch-icon.png` for the iPhone home screen) is an "S" in iA Writer Quattro Italic on a blue gradient. On iPhone, an icon already on the home screen keeps its old image: remove it and add Stream again from Safari's Share menu.
 
 ## Typeface
 
