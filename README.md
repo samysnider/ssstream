@@ -6,7 +6,7 @@ Live: https://ssstream.vercel.app/
 
 ## Icon
 
-The app icon mirrors the app: on an off-white ground, a near-black "S" in iA Writer Quattro Italic (slightly thickened), followed by the blue writing cursor, with the three blue variation dots under it. `apple-touch-icon.png` is the iPhone home-screen icon; `icon.svg`, the browser tab icon, is larger and drops the dots to stay legible at 16px. On iPhone, an icon already on the home screen keeps its old image: remove it and add Stream again from Safari's Share menu.
+The app icon (`icon.svg` for the browser tab, `apple-touch-icon.png` for the iPhone home screen) is an "S" in iA Writer Quattro Italic on a blue gradient. On iPhone, an icon already on the home screen keeps its old image: remove it and add Stream again from Safari's Share menu.
 
 ## Typeface
 
