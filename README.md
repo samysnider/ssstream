@@ -4,6 +4,10 @@ A minimal writing app — plain HTML, CSS and JS (`index.html`, `styles.css`, `s
 
 Live: https://ssstream.vercel.app/
 
+## Typeface
+
+Everything is set in [iA Writer Quattro](https://github.com/iaolo/iA-Fonts) by iA (Information Architects), based on IBM Plex. It's bundled in `fonts/` under the SIL Open Font License (`fonts/LICENSE.md`), so the app loads no fonts from elsewhere.
+
 ## Export to PDF
 
 **PDF** (in the bottom bar, and next to "Copy as .md" on a saved note) exports the note as a clean, typeset document. On screen your text stays plain, exactly as typed; in the PDF, Markdown becomes real formatting: `# Title` to `###### Title` for headings, `**bold**`, `*italic*`, `~~strikethrough~~`, `` `code` ``, `> quotes`, `- lists` and `1. lists`, `[links](url)`, `---` and ```` ``` ```` code blocks, without the markers.

@@ -1344,8 +1344,20 @@ function exportPdf(text) {
     window.removeEventListener('afterprint', restore);
   };
   window.addEventListener('afterprint', restore);
-  window.print();
+  // The PDF needs Quattro's bold and italics, which the screen rarely
+  // uses: print right away if they're loaded (they're fetched in the
+  // background at startup), otherwise wait for them, at most 2 seconds
+  if (PRINT_FACES.every(f => document.fonts.check(f))) window.print();
+  else Promise.race([loadPrintFaces(), new Promise(r => setTimeout(r, 2000))]).then(() => window.print());
 }
+
+const PRINT_FACES = ['400 1em "iA Writer Quattro"', '700 1em "iA Writer Quattro"',
+  'italic 400 1em "iA Writer Quattro"', 'italic 700 1em "iA Writer Quattro"'];
+function loadPrintFaces() {
+  return Promise.all(PRINT_FACES.map(f => document.fonts.load(f).catch(() => {})));
+}
+// Fetch them quietly once the app has settled
+setTimeout(loadPrintFaces, 1500);
 
 document.getElementById('pdfBtn').addEventListener('click', () => {
   updateMainBlur();
